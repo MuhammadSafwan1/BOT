@@ -1,4 +1,14 @@
-﻿const { exec } = require('child_process');
+﻿const contextInfo = {
+    forwardingScore: 1,
+    isForwarded: true,
+    forwardedNewsletterMessageInfo: {
+        newsletterJid: '120363419197664425@newsletter',
+        newsletterName: 'S7 SAFWAN',
+        serverMessageId: -1
+    }
+};
+
+const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
@@ -227,8 +237,3 @@ async function updateCommand(sock, chatId, message, zipOverride) {
 }
 
 module.exports = updateCommand;
-
-
-
-
-
