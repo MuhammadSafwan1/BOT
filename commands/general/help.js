@@ -176,6 +176,18 @@ async function helpCommand(sock, chatId, message) {
 ║
 ║══════════════════>
 ║
+║ 🖥️ FF PANEL COMMANDS
+║
+║══════════════════>
+║
+║═🔹 ${prefix}aimbot
+║═🔹 ${prefix}external
+║═🔹 ${prefix}premium
+║═🔹 ${prefix}injector
+║═🔹 ${prefix}internal
+║
+║══════════════════>
+║
 ║ 🎨 IMAGE & STICKER
 ║
 ║══════════════════>
