@@ -484,7 +484,7 @@ async function startGodszealBotInc() {
                 try {
                     const botNumber = GodszealBotInc.user.id.split(':')[0] + '@s.whatsapp.net';
                     await GodszealBotInc.sendMessage(botNumber, {
-                        text: `🤖 ${BOT_NAME} connected successfully.\n\n👑 Owner: ${OWNER_NAME}\n📞 Contact: +92 3345216246\n⏰ Time: ${new Date().toLocaleString()}\n✅ Status: Online and ready.\n🔒 Mode: Licensed Private Bot`
+                        text: `🤖 ${BOT_NAME} CONNECTED SUCCESSFULLY.\n\n👑 Owner: ${OWNER_NAME}\n📞 Contact: +92 3345216246\n⏰ Time: ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Karachi' })}\n✅ Status: Online and ready.\n🔒 Mode: Licensed Private Bot`
                     });
                 } catch (error) {
                     console.error('Error sending connection message:', error.message)
