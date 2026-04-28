@@ -18,7 +18,7 @@ const settings = {
   storeWriteInterval: 10000,
   description: 'WhatsApp Bot by S7 SAFWAN',
   version: '3.1.0',
-  updateZipUrl: 'https://github.com/MuhammadSafwan1/BOT/archive/refs/heads/master.zip',
+  updateZipUrl: 'https://github.com/MuhammadSafwan1/BOT/archive/refs/heads/main.zip',
   pairApiBase: process.env.PAIR_API_BASE || '',
   mongoUri: process.env.MONGO_URI || '',
   mongoDbName: process.env.MONGO_DB_NAME || 'S7 SAFWAN',
