@@ -1,0 +1,25 @@
+{
+  "bot-name": "S7 SAFWAN",
+  "description": "S7 SAFWAN WhatsApp Bot - Made for people on Earth",
+  "logo": "assets/bot_image.jpg",
+  "keywords": ["bot", "whatsapp", "Muhammad-Safwan"],
+  "documentation-link": "https://gzpair.vercel.app",
+  "owner-verification": "ms8347750@gmail.com",
+  "env": {
+    "SESSION_ID": {
+      "description": "Put session id",
+      "value": "",
+      "required": true
+    },
+    "PREFIX": {
+      "description": "Bot command prefix",
+      "value": ".",
+      "required": true  
+    },
+    "PREMIUM_USERS": {
+      "description": "Premium",
+      "value": "923345216246",
+      "required": false
+    }
+  }
+}

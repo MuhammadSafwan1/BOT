@@ -1,0 +1,26 @@
+{
+  "name": "S7 SAFWAN",
+  "description": "S7 SAFWAN WhatsApp Bot - Made for people on Earth",
+  "keywords": ["whatsapp-bot", "baileys", "nodejs", "bot", "muhammad-safwan"],
+  "repository": "https://github.com/AiOfLautech/God-s-Zeal-Xmd",
+  "logo": "assets/bot_image.jpg",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "env": {
+    "SESSION_ID": {
+      "description": "Put session id",
+      "required": true
+    },
+    "PREFIX": {
+      "description": "Bot command prefix",
+      "value": ".",
+      "required": true  
+    },
+    "PREMIUM_USERS": {
+      "description": "Premium users",
+      "value": "923345216246",
+      "required": false
+    }
+  }
+}
