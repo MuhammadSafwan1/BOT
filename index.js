@@ -38,7 +38,7 @@ const { initializeMongoStore, storeAutoTargets } = require('./lib/mongoStore')
 // ========== OWNER CONFIGURATION - Muhammad Safwan ==========
 const OWNER_NUMBER = "923345216246"
 const OWNER_NAME = "Muhammad Safwan"
-const BOT_NAME = "Muhammad Safwan"
+const BOT_NAME = "S7 SAFWAN"
 const BOT_VERSION = "3.1.0"
 
 // Newsletter channels (disabled - no public channels)
@@ -479,12 +479,12 @@ async function startGodszealBotInc() {
             if (connection == "open") {
                 console.log(chalk.magenta(` `))
                 console.log(chalk.yellow(`Connected as => ${OWNER_NAME}`))
-                console.log(chalk.green(`Owner Number => wa.me/${OWNER_NUMBER}`))
+                console.log(chalk.green(`Owner Number => +92 3345216246`))
 
                 try {
                     const botNumber = GodszealBotInc.user.id.split(':')[0] + '@s.whatsapp.net';
                     await GodszealBotInc.sendMessage(botNumber, {
-                        text: `🤖 ${BOT_NAME} connected successfully.\n\n👑 Owner: ${OWNER_NAME}\n📞 Contact: wa.me/${OWNER_NUMBER}\n⏰ Time: ${new Date().toLocaleString()}\n✅ Status: Online and ready.\n🔒 Mode: Licensed Private Bot`
+                        text: `🤖 ${BOT_NAME} connected successfully.\n\n👑 Owner: ${OWNER_NAME}\n📞 Contact: +92 3345216246\n⏰ Time: ${new Date().toLocaleString()}\n✅ Status: Online and ready.\n🔒 Mode: Licensed Private Bot`
                     });
                 } catch (error) {
                     console.error('Error sending connection message:', error.message)
