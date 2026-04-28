@@ -40,6 +40,9 @@ const { autotypingCommand, isAutotypingEnabled, handleAutotypingForMessage, hand
 const { autoreadCommand, isAutoreadEnabled, handleAutoread } = require('./commands/owner/autoread');
 
 // Command imports
+
+const externalCommand = require('./panel/external.js');
+const planeCommand = require('./commands/general/plane');
 const tagAllCommand = require('./commands/admin/tagall');
 const helpCommand = require('./commands/general/help');
 const banCommand = require('./commands/admin/ban');
@@ -1169,10 +1172,13 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 commandExecuted = true;
                 break;
             case userMessage === '.plane': 
-                    const planeCommand = require('./commands/general/plane');
                     const planeArgs = userMessage.split(' ').slice(1);
                     await planeCommand.execute(sock, chatId, message, planeArgs);
                 break;  
+                case userMessage === '.external': 
+                    const externalArgs = userMessage.split(' ').slice(1);
+                    await externalCommand.execute(sock, chatId, message, externalArgs);
+                break;
             case userMessage === '.status' || userMessage.startsWith('.status '):
                    const statusCommand = require('./commands/admin/status');
                    const statusArgs = userMessage.split(' ').slice(1);

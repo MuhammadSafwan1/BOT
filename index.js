@@ -465,59 +465,70 @@ async function startGodszealBotInc() {
         }
 
         // Connection handling
-        GodszealBotInc.ev.on('connection.update', async (s) => {
-            const { connection, lastDisconnect, qr } = s
-            
-            if (qr) {
-                console.log(chalk.yellow('📱 QR code generated. Please scan with WhatsApp.'))
-            }
-            
-            if (connection === 'connecting') {
-                console.log(chalk.yellow('🔄 Connecting to WhatsApp...'))
-            }
-            
-            if (connection == "open") {
-                console.log(chalk.magenta(` `))
-                console.log(chalk.yellow(`Connected as => ${OWNER_NAME}`))
-                console.log(chalk.green(`Owner Number => +92 3345216246`))
+       GodszealBotInc.ev.on('connection.update', async (s) => {
+    const { connection, lastDisconnect, qr } = s
+    
+    if (qr) {
+        console.log(chalk.yellow('📱 QR code generated. Please scan with WhatsApp.'))
+    }
+    
+    if (connection === 'connecting') {
+        console.log(chalk.yellow('🔄 Connecting to WhatsApp...'))
+    }
+    
+    if (connection == "open") {
+        console.log(chalk.magenta(` `))
+        console.log(chalk.yellow(`Connected as => ${OWNER_NAME}`))
+        console.log(chalk.green(`Owner Number => +92 3345216246`))
 
-                try {
-                    const botNumber = GodszealBotInc.user.id.split(':')[0] + '@s.whatsapp.net';
-                    await GodszealBotInc.sendMessage(botNumber, {
-                        text: `🤖 ${BOT_NAME} CONNECTED SUCCESSFULLY.\n\n👑 Owner: ${OWNER_NAME}\n📞 Contact: +92 3345216246\n⏰ Time: ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Karachi' })}\n✅ Status: Online and ready.\n🔒 Mode: Licensed Private Bot`
-                    });
-                } catch (error) {
-                    console.error('Error sending connection message:', error.message)
-                }
-
-                await animateStartupBanner(GodszealBotInc.user)
-                await sleep(4000)
-                await runAutoActions(GodszealBotInc)
-            }
+        try {
+            const botNumber = GodszealBotInc.user.id.split(':')[0] + '@s.whatsapp.net';
             
-            if (connection === 'close') {
-                const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut
-                const statusCode = lastDisconnect?.error?.output?.statusCode
-                
-                console.log(chalk.red(`Connection closed, reconnecting ${shouldReconnect}`))
-                
-                if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
-                    try {
-                        rmSync('./session', { recursive: true, force: true })
-                        console.log(chalk.yellow('Session folder deleted. Please re-authenticate.'))
-                    } catch (error) {
-                        console.error('Error deleting session:', error)
-                    }
+            const contextInfo = {
+                forwardingScore: 1,
+                isForwarded: true,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: '120363419197664425@newsletter',
+                    newsletterName: 'S7 SAFWAN',
+                    serverMessageId: -1
                 }
-                
-                if (shouldReconnect) {
-                    console.log(chalk.yellow('Reconnecting...'))
-                    await delay(5000)
-                    startGodszealBotInc()
-                }
-            }
-        })
+            };
+            
+            await GodszealBotInc.sendMessage(botNumber, {
+                text: `🤖 ${BOT_NAME} CONNECTED SUCCESSFULLY.\n\n👑 Owner: ${OWNER_NAME}\n📞 Contact: +92 3345216246\n⏰ Time: ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Karachi' })}\n✅ Status: Online and ready.\n🔒 Mode: Licensed Private Bot`,
+                contextInfo: contextInfo
+            });
+        } catch (error) {
+            console.error('Error sending connection message:', error.message)
+        }
 
+        await animateStartupBanner(GodszealBotInc.user)
+        await sleep(4000)
+        await runAutoActions(GodszealBotInc)
+    }
+    
+    if (connection === 'close') {
+        const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut
+        const statusCode = lastDisconnect?.error?.output?.statusCode
+        
+        console.log(chalk.red(`Connection closed, reconnecting ${shouldReconnect}`))
+        
+        if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
+            try {
+                rmSync('./session', { recursive: true, force: true })
+                console.log(chalk.yellow('Session folder deleted. Please re-authenticate.'))
+            } catch (error) {
+                console.error('Error deleting session:', error)
+            }
+        }
+        
+        if (shouldReconnect) {
+            console.log(chalk.yellow('Reconnecting...'))
+            await delay(5000)
+            startGodszealBotInc()
+        }
+    }
+})
         // Track recently-notified callers to avoid spamming messages
         const antiCallNotified = new Set();
 
