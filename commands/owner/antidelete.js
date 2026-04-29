@@ -276,33 +276,40 @@ async function handleMessageRevocation(sock, revocationMessage) {
 
         let reportText = `🔰 *ANTIDELETE REPORT* 🔰\n\n`;
 
-        if (isSelfDelete) {
-            reportText += `⚠️ *User deleted their OWN message*\n\n`;
-            reportText += `🔹 <═════════════════>\n\n`;
-            reportText += `🔹 *User:* @${deleterName}\n`;
-            reportText += `🔹 *Number:* ${deleterNumber}\n`;
-        } else {
-            reportText += `🗑️ *DELETED BY (Admin/Moderator)*\n`;
-            reportText += `🔹 *Name:* @${deleterName}\n`;
-            reportText += `🔹 *Number:* ${deleterNumber}\n\n`;
-            reportText += `🔹 <═════════════════>\n\n`;
-            reportText += `👤 *ORIGINAL SENDER*\n`;
-            reportText += `🔹 *Name:* @${senderName}\n`;
-            reportText += `🔹 *Number:* ${senderNumber}\n`;
-        }
+if (isSelfDelete) {
+    reportText += `⚠️ *User deleted their OWN message*\n\n`;
+    reportText += `🔹 <═════════════════>\n\n`;
+    reportText += `🔹 *User:* @${deleterName}\n`;
+    reportText += `🔹 *Number:* ${deleterNumber}\n`;
+} else {
+    reportText += `🗑️ *DELETED BY (Admin/Moderator)*\n`;
+    reportText += `🔹 *Name:* @${deleterName}\n`;
+    reportText += `🔹 *Number:* ${deleterNumber}\n\n`;
+    reportText += `🔹 <═════════════════>\n\n`;
+    reportText += `👤 *ORIGINAL SENDER*\n`;
+    reportText += `🔹 *Name:* @${senderName}\n`;
+    reportText += `🔹 *Number:* ${senderNumber}\n`;
+}
 
-        if (groupName) {
-            reportText += `\n🔹 *Group:* ${groupName}`;
-        }
+if (groupName) {
+    reportText += `\n🔹 *Group:* ${groupName}`;
+}
 
-        reportText += `\n🔹 *Time:* ${time}`;
+reportText += `\n🔹 *Time:* ${time}`;
 
-        // DELETED MESSAGE IN BOLD
-        if (original.content) {
-            reportText += `\n🔹 *Deleted Message:* *${original.content}*`;
-        }
+reportText += `\n\n💾 *Report Saved Successfully!*\n`;
+reportText += `👨‍💻 *Developer:* S7 SAFWAN`;
 
-        reportText += `\n\n💾 *Report Saved Successfully!*\n\n👨‍💻 *Developer:* S7 SAFWAN`;
+// DELETED MESSAGE AT THE END WITH 💬 EMOJI
+if (original.content) {
+    reportText += `\n\n💬 *Deleted Message:* *${original.content}*`;
+}
+
+// SEND TO OWNER
+await sock.sendMessage(ownerNumber, {
+    text: reportText,
+    mentions: [deletedBy, sender]
+});
 
         // SEND TO OWNER
         await sock.sendMessage(ownerNumber, {
