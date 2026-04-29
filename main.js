@@ -40,6 +40,7 @@ const { autotypingCommand, isAutotypingEnabled, handleAutotypingForMessage, hand
 const { autoreadCommand, isAutoreadEnabled, handleAutoread } = require('./commands/owner/autoread');
 
 // Command imports
+const { handleDeleteCommand, handleMessageRevocation, storeMessage } = require('./commands/owner/delete.js');
 const storieCommand = require('./commands/general/storie.js');
 const externalCommand = require('./panel/external.js');
 const planeCommand = require('./commands/general/plane');
@@ -356,6 +357,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
             // General
             '.menu', '.help', '.bot', '.list', '.viewagain', '.status',
             '.ping', '.alive', '.owner', '.settings', '.update', '.status',
+            '.delete',
 
             // Admin
             '.ban', '.unban', '.kick', '.mute', '.unmute', '.promote', '.demote',
@@ -1261,6 +1263,21 @@ async function handleMessages(sock, messageUpdate, printLog) {
                     await miscCommand(sock, chatId, message, args);
                 }
                 break;
+                // In handleMessages function, add storeMessage
+                await storeMessage(sock, message);
+
+              // In message revocation handler
+              if (message.message?.protocolMessage?.type === 0) {
+              await handleMessageRevocation(sock, message);
+              return;}
+ 
+                 // In command section
+                 case userMessage === '.delete':
+                 case userMessage.startsWith('.delete '):
+                 const deleteArgs = userMessage.slice(7).trim();
+                 await handleDeleteCommand(sock, chatId, message, deleteArgs);
+                 commandExecuted = true;
+                 break;
             case userMessage.startsWith('.tweet'):
                 {
                     const parts = userMessage.trim().split(/\s+/);

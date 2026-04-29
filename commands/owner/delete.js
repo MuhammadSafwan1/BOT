@@ -1,12 +1,33 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const path = require('path');
-const { tmpdir } = require('os');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const { writeFile } = require('fs/promises');
 
+// Import settings for owner number
+const settings = require('../../settings');
+
 const messageStore = new Map();
-const CONFIG_PATH = path.join(__dirname, '../../data/antidelete.json');
+const CONFIG_PATH = path.join(__dirname, '../../data/delete.json');
 const TEMP_MEDIA_DIR = path.join(__dirname, '../tmp');
+
+// Owner information from settings.js
+const OWNER_NUMBER = settings.ownerNumber;
+const OWNER_JID = OWNER_NUMBER + '@s.whatsapp.net';
+
+// Get all owner numbers from settings for proper checks
+const OWNER_NUMBERS = settings.ownerNumbers || [OWNER_NUMBER];
+const OWNER_JIDS = OWNER_NUMBERS.map(num => num + '@s.whatsapp.net');
+
+// Context info for forwarded appearance from settings.js
+const contextInfo = {
+    forwardingScore: 1,
+    isForwarded: true,
+    forwardedNewsletterMessageInfo: {
+        newsletterJid: settings.newsletterJid || '120363419197664425@newsletter',
+        newsletterName: settings.botName || 'S7 SAFWAN',
+        serverMessageId: -1
+    }
+};
 
 // Ensure tmp dir exists
 if (!fs.existsSync(TEMP_MEDIA_DIR)) {
@@ -55,7 +76,7 @@ const cleanTempFolderIfLarge = () => {
 setInterval(cleanTempFolderIfLarge, 60 * 1000);
 
 // Load config
-function loadAntideleteConfig() {
+function loadDeleteConfig() {
     try {
         if (!fs.existsSync(CONFIG_PATH)) return { enabled: false };
         return JSON.parse(fs.readFileSync(CONFIG_PATH));
@@ -65,7 +86,7 @@ function loadAntideleteConfig() {
 }
 
 // Save config
-function saveAntideleteConfig(config) {
+function saveDeleteConfig(config) {
     try {
         fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
     } catch (err) {
@@ -76,19 +97,23 @@ function saveAntideleteConfig(config) {
 const isOwnerOrSudo = require('../../lib/isOwner');
 
 // Command Handler
-async function handleAntideleteCommand(sock, chatId, message, match) {
+async function handleDeleteCommand(sock, chatId, message, match) {
     const senderId = message.key.participant || message.key.remoteJid;
     const isOwner = await isOwnerOrSudo(senderId, sock, chatId);
     
     if (!message.key.fromMe && !isOwner) {
-        return sock.sendMessage(chatId, { text: '*Only the bot owner can use this command.*' }, { quoted: message });
+        return sock.sendMessage(chatId, { 
+            text: '*Only the bot owner can use this command.*',
+            contextInfo: contextInfo
+        }, { quoted: message });
     }
 
-    const config = loadAntideleteConfig();
+    const config = loadDeleteConfig();
 
     if (!match) {
         return sock.sendMessage(chatId, {
-            text: `*🔰 ANTIDELETE SETUP* 🔰\n\n*Current Status:* ${config.enabled ? '✅ Enabled' : '❌ Disabled'}\n\n*.antidelete on* - Enable auto recovery\n*.antidelete off* - Disable auto recovery\n\n*Features:*\n• 📝 Text messages recovery\n• 📸 Image/Video recovery\n• 🔐 View-Once recovery (original state)\n• 🎵 Audio/Sticker recovery\n\n*Reports sent to owner only!*`
+            text: `*🗑️ DELETE RECOVERY SETUP*\n\n<══════════════════>\n\n*Current Status:* ${config.enabled ? '✅ Enabled' : '❌ Disabled'}\n\n*.delete on* - Enable auto recovery\n*.delete off* - Disable auto recovery\n\n<══════════════════>\n\n📞 *Contact Owner:* ${OWNER_NUMBER} (Contact Owner To Get Bot)\n👨‍💻 *Developer:* ${settings.author || 'S7 SAFWAN'}\n\n<══════════════════>\n\n*Note:* When enabled, deleted messages will be automatically recovered in the same chat!`,
+            contextInfo: contextInfo
         }, { quoted: message });
     }
 
@@ -97,17 +122,23 @@ async function handleAntideleteCommand(sock, chatId, message, match) {
     } else if (match === 'off') {
         config.enabled = false;
     } else {
-        return sock.sendMessage(chatId, { text: '*Invalid command. Use .antidelete on/off*' }, { quoted: message });
+        return sock.sendMessage(chatId, { 
+            text: '*Invalid command. Use .delete on/off*',
+            contextInfo: contextInfo
+        }, { quoted: message });
     }
 
-    saveAntideleteConfig(config);
-    return sock.sendMessage(chatId, { text: `*✅ Antidelete ${match === 'on' ? 'enabled' : 'disabled'} successfully!*` }, { quoted: message });
+    saveDeleteConfig(config);
+    return sock.sendMessage(chatId, { 
+        text: `*🗑️ Delete Recovery ${match === 'on' ? 'enabled' : 'disabled'} successfully!*`,
+        contextInfo: contextInfo
+    }, { quoted: message });
 }
 
 // Store incoming messages
 async function storeMessage(sock, message) {
     try {
-        const config = loadAntideleteConfig();
+        const config = loadDeleteConfig();
         if (!config.enabled) return;
 
         if (!message.key?.id) return;
@@ -117,6 +148,7 @@ async function storeMessage(sock, message) {
         let mediaType = '';
         let mediaPath = '';
         let isViewOnce = false;
+        const chatId = message.key.remoteJid;
 
         const sender = message.key.participant || message.key.remoteJid;
 
@@ -130,7 +162,6 @@ async function storeMessage(sock, message) {
                 mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.jpg`);
                 await writeFile(mediaPath, buffer);
                 isViewOnce = true;
-                console.log(`📸 View-Once image stored: ${messageId}`);
             } else if (viewOnceContainer.videoMessage) {
                 mediaType = 'video';
                 content = viewOnceContainer.videoMessage.caption || '';
@@ -138,7 +169,6 @@ async function storeMessage(sock, message) {
                 mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.mp4`);
                 await writeFile(mediaPath, buffer);
                 isViewOnce = true;
-                console.log(`🎥 View-Once video stored: ${messageId}`);
             }
         } else if (message.message?.conversation) {
             content = message.message.conversation;
@@ -176,19 +206,42 @@ async function storeMessage(sock, message) {
             mediaPath,
             sender,
             group: message.key.remoteJid.endsWith('@g.us') ? message.key.remoteJid : null,
-            timestamp: new Date().toISOString(),
-            isViewOnce
+            timestamp: new Date().toISOString()
         });
+
+        // Anti-ViewOnce: recover in same chat immediately
+        if (isViewOnce && mediaType && fs.existsSync(mediaPath)) {
+            try {
+                const senderName = sender.split('@')[0];
+                const mediaCaption = `*🔐 VIEW-ONCE RECOVERED* 🔐\n\n<══════════════════>\n\n👤 *Sender:* @${senderName}\n📎 *Type:* ${mediaType}\n\n<══════════════════>\n\n📞 *Contact Owner:* ${OWNER_NUMBER} (Contact Owner To Get Bot)\n👨‍💻 *Developer:* ${settings.author || 'S7 SAFWAN'}\n\n<══════════════════>`;
+                const mediaOptions = {
+                    caption: mediaCaption,
+                    mentions: [sender],
+                    contextInfo: contextInfo
+                };
+                
+                if (mediaType === 'image') {
+                    await sock.sendMessage(chatId, { image: { url: mediaPath }, ...mediaOptions });
+                } else if (mediaType === 'video') {
+                    await sock.sendMessage(chatId, { video: { url: mediaPath }, ...mediaOptions });
+                }
+                
+                // Cleanup immediately
+                try { fs.unlinkSync(mediaPath); } catch {}
+            } catch (e) {
+                console.error('ViewOnce recover error:', e);
+            }
+        }
 
     } catch (err) {
         console.error('storeMessage error:', err);
     }
 }
 
-// Handle message deletion - WITH VIEW-ONCE AUTO RECOVERY TO OWNER
+// Handle message deletion - RECOVER IN SAME CHAT
 async function handleMessageRevocation(sock, revocationMessage) {
     try {
-        const config = loadAntideleteConfig();
+        const config = loadDeleteConfig();
         if (!config.enabled) return;
 
         const protocolMessage = revocationMessage.message?.protocolMessage;
@@ -203,13 +256,16 @@ async function handleMessageRevocation(sock, revocationMessage) {
                         protocolMessage.participant ||
                         revocationMessage.participant;
         
-        // Get bot owner number
+        // Get bot number
         const botNumber = sock.user.id.split(':')[0];
-        const ownerNumber = botNumber + '@s.whatsapp.net';
+        const botJid = botNumber + '@s.whatsapp.net';
         
-        // Don't report if bot or owner deleted
-        if (deletedBy === ownerNumber || deletedBy.includes(botNumber)) {
-            console.log('Owner/bot deleted message, not reporting');
+        // Check if deleter is bot owner (using owner JIDs from settings)
+        const isOwnerDeleter = OWNER_JIDS.includes(deletedBy);
+        
+        // Don't recover if bot deleted
+        if (deletedBy === botJid || deletedBy.includes(botNumber)) {
+            console.log('Bot deleted message, not recovering');
             return;
         }
 
@@ -218,6 +274,9 @@ async function handleMessageRevocation(sock, revocationMessage) {
             console.log('Message not found in store:', deletedMessageId);
             return;
         }
+
+        // Where to recover (same group or private chat)
+        const recoverChatId = original.group || original.sender;
 
         // Extract sender info
         const sender = original.sender;
@@ -230,9 +289,6 @@ async function handleMessageRevocation(sock, revocationMessage) {
         
         // Check if it's self-delete or admin-delete
         const isSelfDelete = (sender === deletedBy);
-        
-        // Check if it was a view-once message
-        const isViewOnce = original.isViewOnce || false;
         
         // Get group name if in group
         let groupName = '';
@@ -257,103 +313,108 @@ async function handleMessageRevocation(sock, revocationMessage) {
             year: 'numeric'
         });
 
-        let reportText = `🔰 *ANTIDELETE REPORT* 🔰\n\n`;
-
-        // Add view-once indicator
-        if (isViewOnce) {
-            reportText += `🔐 *VIEW-ONCE MEDIA DETECTED & RECOVERED* 🔐\n\n`;
-            reportText += `*📎 Original State Preserved!*\n\n`;
-        }
-
-        if (isSelfDelete) {
-            reportText += `⚠️ *User deleted their OWN message*\n\n`;
-            reportText += `🔹 <═════════════════>\n\n`;
-            reportText += `🔹 *User:* @${deleterName}\n`;
-            reportText += `🔹 *Number:* ${deleterNumber}\n`;
+        let recoverText = `🔰 *DELETED MESSAGE RECOVERED* 🔰\n\n`;
+        recoverText += `<══════════════════>\n\n`;
+        
+        if (isOwnerDeleter) {
+            recoverText += `👑 *OWNER DELETED THIS MESSAGE* 👑\n\n`;
+            recoverText += `<══════════════════>\n\n`;
+            recoverText += `👤 *Original Sender:* @${senderName}\n`;
+        } else if (isSelfDelete) {
+            recoverText += `⚠️ *${deleterName} deleted their OWN message*\n\n`;
+            recoverText += `<══════════════════>\n\n`;
+            recoverText += `👤 *Original Sender:* @${senderName}\n`;
         } else {
-            reportText += `🗑️ *DELETED BY (Admin/Moderator)*\n`;
-            reportText += `🔹 *Name:* @${deleterName}\n`;
-            reportText += `🔹 *Number:* ${deleterNumber}\n\n`;
-            reportText += `🔹 <═════════════════>\n\n`;
-            reportText += `👤 *ORIGINAL SENDER*\n`;
-            reportText += `🔹 *Name:* @${senderName}\n`;
-            reportText += `🔹 *Number:* ${senderNumber}\n`;
+            recoverText += `🗑️ *Deleted by:* @${deleterName}\n`;
+            recoverText += `👤 *Original Sender:* @${senderName}\n`;
         }
-
+        
         if (groupName) {
-            reportText += `\n🔹 *Group:* ${groupName}`;
+            recoverText += `👥 *Group:* ${groupName}\n`;
+        }
+        
+        recoverText += `🕐 *Time:* ${time}\n\n`;
+        recoverText += `<══════════════════>\n\n`;
+        recoverText += `📞 *Contact Owner:* 923345216246 (Contact Owner To Get Bot)\n`;
+        recoverText += `👨‍💻 *Developer:* ${settings.author || 'S7 SAFWAN'}\n\n`;
+        recoverText += `<══════════════════>\n\n`;
+        
+        // Only show deleted message content if NOT deleted by owner
+        if (!isOwnerDeleter && original.content) {
+            recoverText += `💬 *Deleted Message:* *${original.content}*`;
+        } else if (isOwnerDeleter) {
+            recoverText += `🔒 *Message content hidden (deleted by owner)* 🔒`;
         }
 
-        reportText += `\n🔹 *Time:* ${time}`;
-
-        reportText += `\n\n💾 *Report Saved Successfully!*\n`;
-        reportText += `👨‍💻 *Developer:* S7 SAFWAN`;
-
-        // DELETED MESSAGE AT THE END WITH 💬 EMOJI
-        if (original.content) {
-            reportText += `\n\n💬 *Deleted Message:* *${original.content}*`;
-        }
-
-        // SEND REPORT TO OWNER ONLY
-        await sock.sendMessage(ownerNumber, {
-            text: reportText,
-            mentions: [deletedBy, sender]
+        // RECOVER IN SAME CHAT
+        await sock.sendMessage(recoverChatId, {
+            text: recoverText,
+            mentions: [deletedBy, sender],
+            contextInfo: contextInfo
         });
 
-        // Send media if exists (in ORIGINAL STATE - not view-once)
+        // Send media if exists
         if (original.mediaType && fs.existsSync(original.mediaPath)) {
-            let mediaCaption = '';
+            let mediaCaption = `*🔰 DELETED ${original.mediaType.toUpperCase()} RECOVERED* 🔰\n\n`;
+            mediaCaption += `<══════════════════>\n\n`;
             
-            if (isViewOnce) {
-                mediaCaption = `*🔐 VIEW-ONCE ${original.mediaType.toUpperCase()} RECOVERED* 🔐\n\n`;
-                mediaCaption += `*📎 Original State:* Normal (Savable)\n`;
-                mediaCaption += `*👤 From:* @${senderName}\n`;
-                if (!isSelfDelete) {
-                    mediaCaption += `*🗑️ Deleted by:* @${deleterName}\n`;
-                }
-                mediaCaption += `\n*💬 Message:* ${original.content || 'No caption'}`;
+            if (isOwnerDeleter) {
+                mediaCaption += `👑 *OWNER DELETED THIS MEDIA* 👑\n`;
+                mediaCaption += `👤 *Sender:* @${senderName}\n`;
             } else if (isSelfDelete) {
-                mediaCaption = `*Deleted ${original.mediaType}*\nUser deleted their own media\nFrom: @${senderName}`;
+                mediaCaption += `⚠️ *Self Delete by:* @${deleterName}\n`;
+                mediaCaption += `👤 *Sender:* @${senderName}\n`;
             } else {
-                mediaCaption = `*Deleted ${original.mediaType}*\nFrom: @${senderName}\nDeleted by: @${deleterName}`;
+                mediaCaption += `🗑️ *Deleted by:* @${deleterName}\n`;
+                mediaCaption += `👤 *Original Sender:* @${senderName}\n`;
             }
             
-            // Add deleted message at the end of media caption
-            if (original.content && !isViewOnce) {
-                mediaCaption += `\n\n💬 *Deleted Message:* *${original.content}*`;
+            if (groupName) {
+                mediaCaption += `👥 *Group:* ${groupName}\n`;
+            }
+            
+            mediaCaption += `🕐 *Time:* ${time}\n\n`;
+            mediaCaption += `<══════════════════>\n\n`;
+            mediaCaption += `📞 *Contact Owner:* 923345216246 (Contact Owner To Get Bot)\n`;
+            mediaCaption += `👨‍💻 *Developer:* ${settings.author || 'S7 SAFWAN'}\n\n`;
+            mediaCaption += `<══════════════════>\n\n`;
+            
+            // Only show message content if NOT deleted by owner
+            if (!isOwnerDeleter && original.content) {
+                mediaCaption += `💬 *Message:* *${original.content}*`;
+            } else if (isOwnerDeleter) {
+                mediaCaption += `🔒 *Message content hidden (deleted by owner)* 🔒`;
             }
             
             const mediaOptions = {
                 caption: mediaCaption,
-                mentions: [sender, deletedBy]
+                mentions: [sender, deletedBy],
+                contextInfo: contextInfo
             };
 
+            // Still send media even if owner deleted (but without message content)
             try {
                 switch (original.mediaType) {
                     case 'image':
-                        // Send as NORMAL image (not view-once) - original state preserved
-                        await sock.sendMessage(ownerNumber, {
+                        await sock.sendMessage(recoverChatId, {
                             image: { url: original.mediaPath },
                             ...mediaOptions
                         });
-                        console.log(`📸 View-Once image recovered to owner (normal state)`);
                         break;
                     case 'sticker':
-                        await sock.sendMessage(ownerNumber, {
+                        await sock.sendMessage(recoverChatId, {
                             sticker: { url: original.mediaPath },
                             ...mediaOptions
                         });
                         break;
                     case 'video':
-                        // Send as NORMAL video (not view-once) - original state preserved
-                        await sock.sendMessage(ownerNumber, {
+                        await sock.sendMessage(recoverChatId, {
                             video: { url: original.mediaPath },
                             ...mediaOptions
                         });
-                        console.log(`🎥 View-Once video recovered to owner (normal state)`);
                         break;
                     case 'audio':
-                        await sock.sendMessage(ownerNumber, {
+                        await sock.sendMessage(recoverChatId, {
                             audio: { url: original.mediaPath },
                             mimetype: 'audio/mpeg',
                             ptt: false,
@@ -362,9 +423,7 @@ async function handleMessageRevocation(sock, revocationMessage) {
                         break;
                 }
             } catch (err) {
-                await sock.sendMessage(ownerNumber, {
-                    text: `⚠️ Error sending media: ${err.message}`
-                });
+                console.error('Media send error:', err);
             }
 
             // Cleanup media file
@@ -376,7 +435,7 @@ async function handleMessageRevocation(sock, revocationMessage) {
         }
 
         messageStore.delete(deletedMessageId);
-        console.log(`✅ Antidelete report sent to owner for message: ${deletedMessageId}`);
+        console.log(`✅ Deleted message recovered in ${recoverChatId}`);
 
     } catch (err) {
         console.error('handleMessageRevocation error:', err);
@@ -384,7 +443,7 @@ async function handleMessageRevocation(sock, revocationMessage) {
 }
 
 module.exports = {
-    handleAntideleteCommand,
+    handleDeleteCommand,
     handleMessageRevocation,
     storeMessage
 };

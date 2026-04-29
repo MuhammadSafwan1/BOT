@@ -165,6 +165,7 @@ async function helpCommand(sock, chatId, message) {
 ║═🔹 ${prefix}autostatus
 ║═🔹 ${prefix}clearsession
 ║═🔹 ${prefix}antidelete
+║═🔹 ${prefix}delete
 ║═🔹 ${prefix}cleartmp
 ║═🔹 ${prefix}setpp
 ║═🔹 ${prefix}autoreact <on/off>
