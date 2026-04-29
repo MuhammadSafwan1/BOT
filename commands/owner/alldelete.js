@@ -7,7 +7,7 @@ const { writeFile } = require('fs/promises');
 const settings = require('../../settings');
 
 const messageStore = new Map();
-const CONFIG_PATH = path.join(__dirname, '../../data/delete.json');
+const CONFIG_PATH = path.join(__dirname, '../../data/alldelete.json');  // Changed from delete.json
 const TEMP_MEDIA_DIR = path.join(__dirname, '../tmp');
 
 // Owner information from settings.js
@@ -76,7 +76,7 @@ const cleanTempFolderIfLarge = () => {
 setInterval(cleanTempFolderIfLarge, 60 * 1000);
 
 // Load config
-function loadDeleteConfig() {
+function loadAllDeleteConfig() {  // Changed function name
     try {
         if (!fs.existsSync(CONFIG_PATH)) return { enabled: false };
         return JSON.parse(fs.readFileSync(CONFIG_PATH));
@@ -86,7 +86,7 @@ function loadDeleteConfig() {
 }
 
 // Save config
-function saveDeleteConfig(config) {
+function saveAllDeleteConfig(config) {  // Changed function name
     try {
         fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
     } catch (err) {
@@ -96,8 +96,8 @@ function saveDeleteConfig(config) {
 
 const isOwnerOrSudo = require('../../lib/isOwner');
 
-// Command Handler
-async function handleDeleteCommand(sock, chatId, message, match) {
+// Command Handler - Changed to .alldelete
+async function handleAllDeleteCommand(sock, chatId, message, match) {  // Changed function name
     const senderId = message.key.participant || message.key.remoteJid;
     const isOwner = await isOwnerOrSudo(senderId, sock, chatId);
     
@@ -108,11 +108,11 @@ async function handleDeleteCommand(sock, chatId, message, match) {
         }, { quoted: message });
     }
 
-    const config = loadDeleteConfig();
+    const config = loadAllDeleteConfig();  // Updated function call
 
     if (!match) {
         return sock.sendMessage(chatId, {
-            text: `*🗑️ DELETE RECOVERY SETUP*\n\n<══════════════════>\n\n*Current Status:* ${config.enabled ? '✅ Enabled' : '❌ Disabled'}\n\n*.delete on* - Enable auto recovery\n*.delete off* - Disable auto recovery\n\n<══════════════════>\n\n📞 *Contact Owner:* ${OWNER_NUMBER} (Contact Owner To Get Bot)\n👨‍💻 *Developer:* ${settings.author || 'S7 SAFWAN'}\n\n<══════════════════>\n\n*Note:* When enabled, deleted messages will be automatically recovered in the same chat!`,
+            text: `*🗑️ ALL DELETE RECOVERY SETUP*\n\n<══════════════════>\n\n*Current Status:* ${config.enabled ? '✅ Enabled' : '❌ Disabled'}\n\n*.alldelete on* - Enable auto recovery\n*.alldelete off* - Disable auto recovery\n\n<══════════════════>\n\n📞 *Contact Owner:* ${OWNER_NUMBER} (Contact Owner To Get Bot)\n👨‍💻 *Developer:* ${settings.author || 'S7 SAFWAN'}\n\n<══════════════════>\n\n*Note:* When enabled, deleted messages will be automatically recovered in the same chat!`,
             contextInfo: contextInfo
         }, { quoted: message });
     }
@@ -123,22 +123,22 @@ async function handleDeleteCommand(sock, chatId, message, match) {
         config.enabled = false;
     } else {
         return sock.sendMessage(chatId, { 
-            text: '*Invalid command. Use .delete on/off*',
+            text: '*Invalid command. Use .alldelete on/off*',  // Changed command name
             contextInfo: contextInfo
         }, { quoted: message });
     }
 
-    saveDeleteConfig(config);
+    saveAllDeleteConfig(config);  // Updated function call
     return sock.sendMessage(chatId, { 
-        text: `*🗑️ Delete Recovery ${match === 'on' ? 'enabled' : 'disabled'} successfully!*`,
+        text: `*🗑️ All Delete Recovery ${match === 'on' ? 'enabled' : 'disabled'} successfully!*`,
         contextInfo: contextInfo
     }, { quoted: message });
 }
 
 // Store incoming messages
-async function storeMessage(sock, message) {
+async function storeAllDeleteMessage(sock, message) {  // Changed function name
     try {
-        const config = loadDeleteConfig();
+        const config = loadAllDeleteConfig();  // Updated function call
         if (!config.enabled) return;
 
         if (!message.key?.id) return;
@@ -234,14 +234,14 @@ async function storeMessage(sock, message) {
         }
 
     } catch (err) {
-        console.error('storeMessage error:', err);
+        console.error('storeAllDeleteMessage error:', err);
     }
 }
 
 // Handle message deletion - RECOVER IN SAME CHAT
-async function handleMessageRevocation(sock, revocationMessage) {
+async function handleAllDeleteRevocation(sock, revocationMessage) {  // Changed function name
     try {
-        const config = loadDeleteConfig();
+        const config = loadAllDeleteConfig();  // Updated function call
         if (!config.enabled) return;
 
         const protocolMessage = revocationMessage.message?.protocolMessage;
@@ -438,12 +438,12 @@ async function handleMessageRevocation(sock, revocationMessage) {
         console.log(`✅ Deleted message recovered in ${recoverChatId}`);
 
     } catch (err) {
-        console.error('handleMessageRevocation error:', err);
+        console.error('handleAllDeleteRevocation error:', err);
     }
 }
 
 module.exports = {
-    handleDeleteCommand,
-    handleMessageRevocation,
-    storeMessage
-};
+    handleAllDeleteCommand,      // Changed export name
+    handleAllDeleteRevocation,   // Changed export name
+    storeAllDeleteMessage        // Changed export name
+}
