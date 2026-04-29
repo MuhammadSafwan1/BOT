@@ -196,7 +196,7 @@ function saveAllDeleteConfig(config) {
 }
 
 // Command Handler
-async function handleAllDeleteCommand(sock, chatId, message, match) {
+async function handleAntideleteCommand(sock, chatId, message, match) {
     const senderId = message.key.participant || message.key.remoteJid;
     const isOwner = await isOwnerOrSudo(senderId, sock, chatId);
     
@@ -235,7 +235,7 @@ async function handleAllDeleteCommand(sock, chatId, message, match) {
 }
 
 // Store incoming messages
-async function storeAllDeleteMessage(sock, message) {
+async function storeMessage(sock, message) {
     try {
         const config = loadAllDeleteConfig();
         if (!config.enabled) return;
@@ -330,12 +330,12 @@ async function storeAllDeleteMessage(sock, message) {
         }
 
     } catch (err) {
-        console.error('storeAllDeleteMessage error:', err);
+        console.error('storeMessage error:', err);
     }
 }
 
 // Handle message deletion - SEND ONLY TO OWNER'S PRIVATE NUMBER WITH NAMES
-async function handleAllDeleteRevocation(sock, revocationMessage) {
+async function handleMessageRevocation(sock, revocationMessage) {
     try {
         const config = loadAllDeleteConfig();
         if (!config.enabled) return;
@@ -563,12 +563,12 @@ async function handleAllDeleteRevocation(sock, revocationMessage) {
         console.log(`✅ Deleted message report sent to owner: ${ownerChatId}`);
 
     } catch (err) {
-        console.error('handleAllDeleteRevocation error:', err);
+        console.error('handleMessageRevocation error:', err);
     }
 }
 
 module.exports = {
-    handleAllDeleteCommand,
-    handleAllDeleteRevocation,
-    storeAllDeleteMessage
+    handleAntideleteCommand,
+    handleMessageRevocation,
+    storeMessage
 }
