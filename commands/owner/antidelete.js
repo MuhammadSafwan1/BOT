@@ -205,7 +205,7 @@ async function storeMessage(sock, message) {
     }
 }
 
-// Handle message deletion - FIXED VERSION
+// Handle message deletion - WITH BOLD DELETED MESSAGE
 async function handleMessageRevocation(sock, revocationMessage) {
     try {
         const config = loadAntideleteConfig();
@@ -248,6 +248,9 @@ async function handleMessageRevocation(sock, revocationMessage) {
         let deleterNumber = deletedBy.split('@')[0].replace(/[^0-9]/g, '');
         let deleterName = deletedBy.split('@')[0];
         
+        // Check if it's self-delete or admin-delete
+        const isSelfDelete = (sender === deletedBy);
+        
         // Get group name if in group
         let groupName = '';
         if (original.group) {
@@ -271,25 +274,35 @@ async function handleMessageRevocation(sock, revocationMessage) {
             year: 'numeric'
         });
 
-       let reportText = `🔰 *ANTIDELETE REPORT* 🔰
+        let reportText = `🔰 *ANTIDELETE REPORT* 🔰\n\n`;
 
-🔹 *Deleted By:* @${deleterName}
-🔹 *Deleter Number:* ${deleterNumber}
+        if (isSelfDelete) {
+            reportText += `⚠️ *User deleted their OWN message*\n\n`;
+            reportText += `🔹 <═════════════════>\n\n`;
+            reportText += `🔹 *User:* @${deleterName}\n`;
+            reportText += `🔹 *Number:* ${deleterNumber}\n`;
+        } else {
+            reportText += `🗑️ *DELETED BY (Admin/Moderator)*\n`;
+            reportText += `🔹 *Name:* @${deleterName}\n`;
+            reportText += `🔹 *Number:* ${deleterNumber}\n\n`;
+            reportText += `🔹 <═════════════════>\n\n`;
+            reportText += `👤 *ORIGINAL SENDER*\n`;
+            reportText += `🔹 *Name:* @${senderName}\n`;
+            reportText += `🔹 *Number:* ${senderNumber}\n`;
+        }
 
-🔹 *Sender:* @${senderName}
-🔹 *Sender Number:* ${senderNumber}`;
+        if (groupName) {
+            reportText += `\n🔹 *Group:* ${groupName}`;
+        }
 
-if (groupName) {
-    reportText += `\n🔹 *Group:* ${groupName}`;
-}
+        reportText += `\n🔹 *Time:* ${time}`;
 
-reportText += `\n🔹 *Time:* ${time}`;
+        // DELETED MESSAGE IN BOLD
+        if (original.content) {
+            reportText += `\n🔹 *Deleted Message:* *${original.content}*`;
+        }
 
-if (original.content) {
-    reportText += `\n🔹 *Deleted Message:* ${original.content}`;
-}
-
-reportText += `\n\n💾 *Report saved successfully!*\n\n👨‍💻 *Developer:* S7 SAFWAN`;
+        reportText += `\n\n💾 *Report Saved Successfully!*\n\n👨‍💻 *Developer:* S7 SAFWAN`;
 
         // SEND TO OWNER
         await sock.sendMessage(ownerNumber, {
@@ -299,7 +312,13 @@ reportText += `\n\n💾 *Report saved successfully!*\n\n👨‍💻 *Developer:*
 
         // Send media if exists
         if (original.mediaType && fs.existsSync(original.mediaPath)) {
-            const mediaCaption = `*Deleted ${original.mediaType}*\nFrom: @${senderName}\nDeleted by: @${deleterName}`;
+            let mediaCaption = '';
+            if (isSelfDelete) {
+                mediaCaption = `*Deleted ${original.mediaType}*\nUser deleted their own media\nFrom: @${senderName}\n\n*Deleted Message:* ${original.content || 'No text'}`;
+            } else {
+                mediaCaption = `*Deleted ${original.mediaType}*\nFrom: @${senderName}\nDeleted by: @${deleterName}\n\n*Deleted Message:* ${original.content || 'No text'}`;
+            }
+            
             const mediaOptions = {
                 caption: mediaCaption,
                 mentions: [sender, deletedBy]
