@@ -40,9 +40,6 @@ const { autotypingCommand, isAutotypingEnabled, handleAutotypingForMessage, hand
 const { autoreadCommand, isAutoreadEnabled, handleAutoread } = require('./commands/owner/autoread');
 
 // Command imports
-// Update import in main.js (line 16)
-const { handleAllDeleteCommand, handleAllDeleteRevocation, storeAllDeleteMessage } = require('./commands/owner/alldelete');
-await storeDeleteMessage(sock, message);  // Updated name
 const storieCommand = require('./commands/general/storie.js');
 const externalCommand = require('./panel/external.js');
 const planeCommand = require('./commands/general/plane');
@@ -152,6 +149,12 @@ const settingsCommand = require('./commands/general/settings');
 const soraCommand = require('./commands/ai/sora');
 const { touchUser } = require('./lib/premium/database');
 const { storeLinkedUser, storeChannelAction } = require('./lib/mongoStore');
+// Add with other command imports (around line 16)
+const { 
+    handleAllDeleteCommand, 
+    handleAllDeleteRevocation, 
+    storeAllDeleteMessage 
+} = require('./commands/owner/alldelete');
 
 // Global settings
 global.packname = settings.packname;
@@ -190,6 +193,15 @@ async function handleMessages(sock, messageUpdate, printLog) {
         // Handle autoread functionality
         await handleAutoread(sock, message);
 
+        await storeAllDeleteMessage(sock, message);
+        
+        // Handle message revocation for alldelete (when someone deletes a message)
+        if (message.message?.protocolMessage?.type === 0) {
+            console.log('🔄 Message deletion detected, recovering...');
+            await handleAllDeleteRevocation(sock, message);
+            return;
+        }
+        
         // Store message for antidelete feature
         if (message.message) {
             storeMessage(sock, message);
@@ -241,7 +253,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 await sock.sendMessage(chatId, {
                     text: `📋 Copy this pairing code:\n\n${code}`
                 }, { quoted: message });
-                return
+                return;
             }
         }
 
@@ -358,8 +370,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
 
             // General
             '.menu', '.help', '.bot', '.list', '.viewagain', '.status',
-            '.ping', '.alive', '.owner', '.settings', '.update', '.status',
-            '.alldelete',
+            '.ping', '.alive', '.owner', '.settings', '.update',
 
             // Admin
             '.ban', '.unban', '.kick', '.mute', '.unmute', '.promote', '.demote',
@@ -548,7 +559,11 @@ async function handleMessages(sock, messageUpdate, printLog) {
             case userMessage.startsWith('.attp'):
                 await attpCommand(sock, chatId, message);
                 break;
-
+case userMessage.startsWith('.alldelete'):
+    const alldeleteArgs = userMessage.slice(10).trim();
+    await handleAllDeleteCommand(sock, chatId, message, alldeleteArgs);
+    commandExecuted = true;
+    break;
             case userMessage === '.settings':
                 await settingsCommand(sock, chatId, message);
                 break;
@@ -1265,19 +1280,6 @@ async function handleMessages(sock, messageUpdate, printLog) {
                     await miscCommand(sock, chatId, message, args);
                 }
                 break;
-
-
-                   if (message.message?.protocolMessage?.type === 0) {
-                    await handleAllDeleteRevocation(sock, message);
-                    return;
-                  }
-             await storeAllDeleteMessage(sock, message);
-
-              case userMessage.startsWith('.alldelete'):
-              const alldeleteArgs = userMessage.slice(10).trim();
-              await handleAllDeleteCommand(sock, chatId, message, alldeleteArgs);
-              commandExecuted = true;
-              break;
             case userMessage.startsWith('.tweet'):
                 {
                     const parts = userMessage.trim().split(/\s+/);
