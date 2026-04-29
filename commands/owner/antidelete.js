@@ -272,43 +272,31 @@ async function handleMessageRevocation(sock, revocationMessage) {
         });
 
         // Create report message
-        let reportText = `┏━━━━━━━━━━━━━━━━━━━━━━┓
-┃     🔰 ANTIDELETE REPORT 🔰     ┃
-┗━━━━━━━━━━━━━━━━━━━━━━┛
+        let reportText = `🔰 *ANTIDELETE REPORT* 🔰
 
-╭─────────────────╮
-│ 🗑️ DELETED BY   │
-╰─────────────────╯
+━━━━━━━━━━━━━━━━━━
+
+🗑️ *DELETED BY*
 ▸ 👤 Name: @${deleterName}
 ▸ 📱 Number: ${deleterNumber}
 
-╭─────────────────╮
-│ 👤 SENDER       │
-╰─────────────────╯
+━━━━━━━━━━━━━━━━━━
+
+👤 *SENDER*
 ▸ 👤 Name: @${senderName}
 ▸ 📱 Number: ${senderNumber}`;
 
-        if (groupName) {
-            reportText += `\n\n╭─────────────────╮\n│ 👥 GROUP INFO   │\n╰─────────────────╯\n▸ 📛 Name: ${groupName}`;
-        }
+if (groupName) {
+    reportText += `\n\n━━━━━━━━━━━━━━━━━━\n\n👥 *GROUP INFO*\n▸ 📛 Name: ${groupName}`;
+}
 
-        reportText += `\n\n╭─────────────────╮
-│ 🕐 TIME INFO    │
-╰─────────────────╯
-▸ 🕒 Time: ${time}
+reportText += `\n\n━━━━━━━━━━━━━━━━━━\n\n🕐 *TIME INFO*\n▸ 🕒 Time: ${time}`;
 
-━━━━━━━━━━━━━━━━━━━━━━`;
+if (original.content) {
+    reportText += `\n\n━━━━━━━━━━━━━━━━━━\n\n💬 *DELETED TEXT*\n▸ ${original.content}`;
+}
 
-        if (original.content) {
-            reportText += `\n\n╭─────────────────╮
-│ 💬 DELETED TEXT │
-╰─────────────────╯
-▸ ${original.content}
-
-━━━━━━━━━━━━━━━━━━━━━━`;
-        }
-
-        reportText += `\n👨‍💻 *Developer:* S7 SAFWAN\n━━━━━━━━━━━━━━━━━━━━━━`;
+reportText += `\n\n━━━━━━━━━━━━━━━━━━\n👨‍💻 *Developer:* S7 SAFWAN\n━━━━━━━━━━━━━━━━━━`;
 
         // SEND TO OWNER
         await sock.sendMessage(ownerNumber, {
