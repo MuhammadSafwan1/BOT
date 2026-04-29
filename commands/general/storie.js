@@ -54,29 +54,7 @@ async function storieCommand(sock, chatId, message, args) {
             // Send to the chat where command was executed (user's personal chat)
             await sock.sendMessage(chatId, {
                 image: buffer,
-                caption: `┏━━━━━━━━━━━━━━━━━━━━┓
-┃      📸 STATUS DOWNLOADED      ┃
-┗━━━━━━━━━━━━━━━━━━━━┛
-
-╭─────────────────╮
-│ 📋 DETAILS      │
-╰─────────────────╯
-
-▸ ✨ Type      : Image
-▸ 👤 Sender    : ${senderNumber}
-▸ 🕐 Time      : ${currentTime}
-
-╭─────────────────╮
-│ 💾 STATUS       │
-╰─────────────────╯
-
-✓ Downloaded successfully!
-✓ Saved to your chat
-
-━━━━━━━━━━━━━━━━━━━━━━
-👨‍💻 Developer : S7 SAFWAN
-👑 OWNER    : 923345216246 
-━━━━━━━━━━━━━━━━━━━━━━`,
+                caption: `📸 *Status Downloaded*\n\n🔹 *Type:* Image\n🔹 *Sender:* ${senderNumber}\n🔹 *Time:* ${currentTime}\n\n💾 *Status saved successfully!*\n\n👨‍💻 *Developer:* S7 SAFWAN`,
                 mimetype: 'image/jpeg',
                 ...contextInfo
             });
@@ -97,29 +75,7 @@ async function storieCommand(sock, chatId, message, args) {
             // Send to the chat where command was executed (user's personal chat)
             await sock.sendMessage(chatId, {
                 video: buffer,
-                caption: `┏━━━━━━━━━━━━━━━━━━━━┓
-┃      🎥 STATUS DOWNLOADED      ┃
-┗━━━━━━━━━━━━━━━━━━━━┛
-
-╭─────────────────╮
-│ 📋 DETAILS      │
-╰─────────────────╯
-
-▸ ✨ Type      : Video
-▸ 👤 Sender    : ${senderNumber}
-▸ 🕐 Time      : ${currentTime}
-
-╭─────────────────╮
-│ 💾 STATUS       │
-╰─────────────────╯
-
-✓ Downloaded successfully!
-✓ Saved to your chat
-
-━━━━━━━━━━━━━━━━━━━━━━
-👨‍💻 Developer : S7 SAFWAN
-👑 OWNER    : 923345216246 
-━━━━━━━━━━━━━━━━━━━━━━`,
+                caption: `🎥 *Status Downloaded*\n\n🔹 *Type:* Video\n🔹 *Sender:* ${senderNumber}\n🔹 *Time:* ${currentTime}\n\n💾 *Status saved successfully!*\n\n👨‍💻 *Developer:* S7 SAFWAN`,
                 mimetype: 'video/mp4',
                 ...contextInfo
             });
