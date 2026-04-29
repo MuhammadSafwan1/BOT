@@ -26,14 +26,14 @@ const getFolderSizeInMB = (folderPath) => {
             }
         }
 
-        return totalSize / (1024 * 1024);
+        return totalSize / (1024 * 1024); // Convert bytes to MB
     } catch (err) {
         console.error('Error getting folder size:', err);
         return 0;
     }
 };
 
-// Function to clean temp folder if size exceeds 200MB
+// Function to clean temp folder if size exceeds 10MB
 const cleanTempFolderIfLarge = () => {
     try {
         const sizeMB = getFolderSizeInMB(TEMP_MEDIA_DIR);
@@ -44,7 +44,6 @@ const cleanTempFolderIfLarge = () => {
                 const filePath = path.join(TEMP_MEDIA_DIR, file);
                 fs.unlinkSync(filePath);
             }
-            console.log('🧹 Temp folder cleaned (exceeded 200MB)');
         }
     } catch (err) {
         console.error('Temp cleanup error:', err);
@@ -88,8 +87,8 @@ async function handleAntideleteCommand(sock, chatId, message, match) {
 
     if (!match) {
         return sock.sendMessage(chatId, {
-            text: `*🔰 ANTIDELETE SETUP* 🔰\n\n*Current Status:* ${config.enabled ? '✅ Enabled' : '❌ Disabled'}\n\n*.antidelete on* - Enable auto recovery\n*.antidelete off* - Disable auto recovery\n\n*Features:*\n• 📝 Text messages recovery\n• 📸 Image/Video recovery\n• 🔐 View-Once recovery (original state)\n• 🎵 Audio/Sticker recovery\n\n*Reports sent to owner only!*`
-        }, { quoted: message });
+            text: `*ANTIDELETE SETUP*\n\nCurrent Status: ${config.enabled ? '✅ Enabled' : '❌ Disabled'}\n\n*.antidelete on* - Enable\n*.antidelete off* - Disable`
+        }, {quoted: message});
     }
 
     if (match === 'on') {
@@ -97,18 +96,18 @@ async function handleAntideleteCommand(sock, chatId, message, match) {
     } else if (match === 'off') {
         config.enabled = false;
     } else {
-        return sock.sendMessage(chatId, { text: '*Invalid command. Use .antidelete on/off*' }, { quoted: message });
+        return sock.sendMessage(chatId, { text: '*Invalid command. Use .antidelete to see usage.*' }, {quoted:message});
     }
 
     saveAntideleteConfig(config);
-    return sock.sendMessage(chatId, { text: `*✅ Antidelete ${match === 'on' ? 'enabled' : 'disabled'} successfully!*` }, { quoted: message });
+    return sock.sendMessage(chatId, { text: `*Antidelete ${match === 'on' ? 'enabled' : 'disabled'}*` }, {quoted:message});
 }
 
-// Store incoming messages
+// Store incoming messages (also handles anti-view-once by forwarding immediately)
 async function storeMessage(sock, message) {
     try {
         const config = loadAntideleteConfig();
-        if (!config.enabled) return;
+        if (!config.enabled) return; // Don't store if antidelete is disabled
 
         if (!message.key?.id) return;
 
@@ -123,6 +122,7 @@ async function storeMessage(sock, message) {
         // Detect content (including view-once wrappers)
         const viewOnceContainer = message.message?.viewOnceMessageV2?.message || message.message?.viewOnceMessage?.message;
         if (viewOnceContainer) {
+            // unwrap view-once content
             if (viewOnceContainer.imageMessage) {
                 mediaType = 'image';
                 content = viewOnceContainer.imageMessage.caption || '';
@@ -130,7 +130,6 @@ async function storeMessage(sock, message) {
                 mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.jpg`);
                 await writeFile(mediaPath, buffer);
                 isViewOnce = true;
-                console.log(`📸 View-Once image stored: ${messageId}`);
             } else if (viewOnceContainer.videoMessage) {
                 mediaType = 'video';
                 content = viewOnceContainer.videoMessage.caption || '';
@@ -138,7 +137,6 @@ async function storeMessage(sock, message) {
                 mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.mp4`);
                 await writeFile(mediaPath, buffer);
                 isViewOnce = true;
-                console.log(`🎥 View-Once video stored: ${messageId}`);
             }
         } else if (message.message?.conversation) {
             content = message.message.conversation;
@@ -176,167 +174,92 @@ async function storeMessage(sock, message) {
             mediaPath,
             sender,
             group: message.key.remoteJid.endsWith('@g.us') ? message.key.remoteJid : null,
-            timestamp: new Date().toISOString(),
-            isViewOnce
+            timestamp: new Date().toISOString()
         });
+
+        // Anti-ViewOnce: forward immediately to owner if captured
+        if (isViewOnce && mediaType && fs.existsSync(mediaPath)) {
+            try {
+                const ownerNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+                const senderName = sender.split('@')[0];
+                const mediaOptions = {
+                    caption: `*Anti-ViewOnce ${mediaType}*
+From: @${senderName}`,
+                    mentions: [sender]
+                };
+                if (mediaType === 'image') {
+                    await sock.sendMessage(ownerNumber, { image: { url: mediaPath }, ...mediaOptions });
+                } else if (mediaType === 'video') {
+                    await sock.sendMessage(ownerNumber, { video: { url: mediaPath }, ...mediaOptions });
+                }
+                // Cleanup immediately for view-once forward
+                try { fs.unlinkSync(mediaPath); } catch {}
+            } catch (e) {
+                // ignore
+            }
+        }
 
     } catch (err) {
         console.error('storeMessage error:', err);
     }
 }
 
-// Handle message deletion - WITH VIEW-ONCE AUTO RECOVERY TO OWNER
+// Handle message deletion
 async function handleMessageRevocation(sock, revocationMessage) {
     try {
         const config = loadAntideleteConfig();
         if (!config.enabled) return;
 
-        const protocolMessage = revocationMessage.message?.protocolMessage;
-        if (!protocolMessage || protocolMessage.type !== 0) return;
+        const messageId = revocationMessage.message.protocolMessage.key.id;
+        const deletedBy = revocationMessage.participant || revocationMessage.key.participant || revocationMessage.key.remoteJid;
+        const ownerNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
 
-        const deletedMessageId = protocolMessage.key?.id;
-        if (!deletedMessageId) return;
+        if (deletedBy.includes(sock.user.id) || deletedBy === ownerNumber) return;
 
-        // WHO DELETED THE MESSAGE
-        let deletedBy = revocationMessage.key?.participant || 
-                        revocationMessage.key?.remoteJid || 
-                        protocolMessage.participant ||
-                        revocationMessage.participant;
-        
-        // Get bot owner number
-        const botNumber = sock.user.id.split(':')[0];
-        const ownerNumber = botNumber + '@s.whatsapp.net';
-        
-        // Don't report if bot or owner deleted
-        if (deletedBy === ownerNumber || deletedBy.includes(botNumber)) {
-            console.log('Owner/bot deleted message, not reporting');
-            return;
-        }
+        const original = messageStore.get(messageId);
+        if (!original) return;
 
-        const original = messageStore.get(deletedMessageId);
-        if (!original) {
-            console.log('Message not found in store:', deletedMessageId);
-            return;
-        }
-
-        // Extract sender info
         const sender = original.sender;
-        const senderNumber = sender.split('@')[0].replace(/[^0-9]/g, '');
         const senderName = sender.split('@')[0];
-        
-        // Extract deleter info
-        let deleterNumber = deletedBy.split('@')[0].replace(/[^0-9]/g, '');
-        let deleterName = deletedBy.split('@')[0];
-        
-        // Check if it's self-delete or admin-delete
-        const isSelfDelete = (sender === deletedBy);
-        
-        // Check if it was a view-once message
-        const isViewOnce = original.isViewOnce || false;
-        
-        // Get group name if in group
-        let groupName = '';
-        if (original.group) {
-            try {
-                const groupMetadata = await sock.groupMetadata(original.group);
-                groupName = groupMetadata.subject;
-            } catch (e) {
-                groupName = 'Unknown Group';
-            }
-        }
+        const groupName = original.group ? (await sock.groupMetadata(original.group)).subject : '';
 
-        // Format time
         const time = new Date().toLocaleString('en-US', {
-            timeZone: 'Asia/Karachi',
-            hour12: true,
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
+            timeZone: 'Asia/Kolkata',
+            hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit',
+            day: '2-digit', month: '2-digit', year: 'numeric'
         });
 
-        let reportText = `🔰 *ANTIDELETE REPORT* 🔰\n\n`;
+        let text = `*🔰 ANTIDELETE REPORT 🔰*\n\n` +
+            `*🗑️ Deleted By:* @${deletedBy.split('@')[0]}\n` +
+            `*👤 Sender:* @${senderName}\n` +
+            `*📱 Number:* ${sender}\n` +
+            `*🕒 Time:* ${time}\n`;
 
-        // Add view-once indicator
-        if (isViewOnce) {
-            reportText += `🔐 *VIEW-ONCE MEDIA DETECTED & RECOVERED* 🔐\n\n`;
-            reportText += `*📎 Original State Preserved!*\n\n`;
-        }
+        if (groupName) text += `*👥 Group:* ${groupName}\n`;
 
-        if (isSelfDelete) {
-            reportText += `⚠️ *User deleted their OWN message*\n\n`;
-            reportText += `🔹 <═════════════════>\n\n`;
-            reportText += `🔹 *User:* @${deleterName}\n`;
-            reportText += `🔹 *Number:* ${deleterNumber}\n`;
-        } else {
-            reportText += `🗑️ *DELETED BY (Admin/Moderator)*\n`;
-            reportText += `🔹 *Name:* @${deleterName}\n`;
-            reportText += `🔹 *Number:* ${deleterNumber}\n\n`;
-            reportText += `🔹 <═════════════════>\n\n`;
-            reportText += `👤 *ORIGINAL SENDER*\n`;
-            reportText += `🔹 *Name:* @${senderName}\n`;
-            reportText += `🔹 *Number:* ${senderNumber}\n`;
-        }
-
-        if (groupName) {
-            reportText += `\n🔹 *Group:* ${groupName}`;
-        }
-
-        reportText += `\n🔹 *Time:* ${time}`;
-
-        reportText += `\n\n💾 *Report Saved Successfully!*\n`;
-        reportText += `👨‍💻 *Developer:* S7 SAFWAN`;
-
-        // DELETED MESSAGE AT THE END WITH 💬 EMOJI
         if (original.content) {
-            reportText += `\n\n💬 *Deleted Message:* *${original.content}*`;
+            text += `\n*💬 Deleted Message:*\n${original.content}`;
         }
 
-        // SEND REPORT TO OWNER ONLY
         await sock.sendMessage(ownerNumber, {
-            text: reportText,
+            text,
             mentions: [deletedBy, sender]
         });
 
-        // Send media if exists (in ORIGINAL STATE - not view-once)
+        // Media sending
         if (original.mediaType && fs.existsSync(original.mediaPath)) {
-            let mediaCaption = '';
-            
-            if (isViewOnce) {
-                mediaCaption = `*🔐 VIEW-ONCE ${original.mediaType.toUpperCase()} RECOVERED* 🔐\n\n`;
-                mediaCaption += `*📎 Original State:* Normal (Savable)\n`;
-                mediaCaption += `*👤 From:* @${senderName}\n`;
-                if (!isSelfDelete) {
-                    mediaCaption += `*🗑️ Deleted by:* @${deleterName}\n`;
-                }
-                mediaCaption += `\n*💬 Message:* ${original.content || 'No caption'}`;
-            } else if (isSelfDelete) {
-                mediaCaption = `*Deleted ${original.mediaType}*\nUser deleted their own media\nFrom: @${senderName}`;
-            } else {
-                mediaCaption = `*Deleted ${original.mediaType}*\nFrom: @${senderName}\nDeleted by: @${deleterName}`;
-            }
-            
-            // Add deleted message at the end of media caption
-            if (original.content && !isViewOnce) {
-                mediaCaption += `\n\n💬 *Deleted Message:* *${original.content}*`;
-            }
-            
             const mediaOptions = {
-                caption: mediaCaption,
-                mentions: [sender, deletedBy]
+                caption: `*Deleted ${original.mediaType}*\nFrom: @${senderName}`,
+                mentions: [sender]
             };
 
             try {
                 switch (original.mediaType) {
                     case 'image':
-                        // Send as NORMAL image (not view-once) - original state preserved
                         await sock.sendMessage(ownerNumber, {
                             image: { url: original.mediaPath },
                             ...mediaOptions
                         });
-                        console.log(`📸 View-Once image recovered to owner (normal state)`);
                         break;
                     case 'sticker':
                         await sock.sendMessage(ownerNumber, {
@@ -345,12 +268,10 @@ async function handleMessageRevocation(sock, revocationMessage) {
                         });
                         break;
                     case 'video':
-                        // Send as NORMAL video (not view-once) - original state preserved
                         await sock.sendMessage(ownerNumber, {
                             video: { url: original.mediaPath },
                             ...mediaOptions
                         });
-                        console.log(`🎥 View-Once video recovered to owner (normal state)`);
                         break;
                     case 'audio':
                         await sock.sendMessage(ownerNumber, {
@@ -367,7 +288,7 @@ async function handleMessageRevocation(sock, revocationMessage) {
                 });
             }
 
-            // Cleanup media file
+            // Cleanup
             try {
                 fs.unlinkSync(original.mediaPath);
             } catch (err) {
@@ -375,8 +296,7 @@ async function handleMessageRevocation(sock, revocationMessage) {
             }
         }
 
-        messageStore.delete(deletedMessageId);
-        console.log(`✅ Antidelete report sent to owner for message: ${deletedMessageId}`);
+        messageStore.delete(messageId);
 
     } catch (err) {
         console.error('handleMessageRevocation error:', err);
@@ -388,3 +308,5 @@ module.exports = {
     handleMessageRevocation,
     storeMessage
 };
+
+
