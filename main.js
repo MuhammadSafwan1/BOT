@@ -238,7 +238,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 await sock.sendMessage(chatId, {
                     text: `📋 Copy this pairing code:\n\n${code}`
                 }, { quoted: message });
-                return;
+                return
             }
         }
 
@@ -355,7 +355,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
 
             // General
             '.menu', '.help', '.bot', '.list', '.viewagain', '.status',
-            '.ping', '.alive', '.owner', '.settings', '.update',
+            '.ping', '.alive', '.owner', '.settings', '.update', '.status',
 
             // Admin
             '.ban', '.unban', '.kick', '.mute', '.unmute', '.promote', '.demote',

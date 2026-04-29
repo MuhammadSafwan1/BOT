@@ -1,5 +1,15 @@
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 
+const contextInfo = {
+    forwardingScore: 1,
+    isForwarded: true,
+    forwardedNewsletterMessageInfo: {
+        newsletterJid: '120363419197664425@newsletter',
+        newsletterName: 'S7 SAFWAN',
+        serverMessageId: -1
+    }
+};
+
 async function storieCommand(sock, chatId, message, args) {
     try {
         // Extract quoted message from the reply
@@ -9,17 +19,28 @@ async function storieCommand(sock, chatId, message, args) {
         const imageStory = quoted?.imageMessage;
         const videoStory = quoted?.videoMessage;
         
-        // Get sender info
+        // Get sender info and clean JID to show only number
         const sender = quoted?.key?.remoteJid || message.key.remoteJid;
+        const senderNumber = sender.split('@')[0].replace(/[^0-9]/g, '');
         const isStatus = sender?.includes('status@broadcast');
         
         // Check if it's actually a status/story
         if (!imageStory && !videoStory) {
             await sock.sendMessage(chatId, { 
-                text: '❌ Please reply to a status/story message\n\n*Usage:*\nReply to any status with .storie to download it\n\nThe media will be sent directly to your chat.' 
+                text: '❌ Please reply to a status/story message\n\n*Usage:*\nReply to any status with .storie to download it\n\nThe media will be sent directly to your chat.',
+                ...contextInfo
             }, { quoted: message });
             return;
         }
+        
+        // Format time
+        const currentTime = new Date().toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            second: '2-digit', 
+            hour12: true, 
+            timeZone: 'Asia/Karachi' 
+        });
         
         // Handle image story
         if (imageStory) {
@@ -33,8 +54,31 @@ async function storieCommand(sock, chatId, message, args) {
             // Send to the chat where command was executed (user's personal chat)
             await sock.sendMessage(chatId, {
                 image: buffer,
-                caption: `📸 *Status Downloaded*\n\n🔹 *Type:* Image\n🔹 *Sender:* ${sender.split('@')[0]}\n🔹 *Time:* ${new Date().toLocaleString()}\n\n💾 *Status saved successfully!*`,
-                mimetype: 'image/jpeg'
+                caption: `┏━━━━━━━━━━━━━━━━━━━━┓
+┃      📸 STATUS DOWNLOADED      ┃
+┗━━━━━━━━━━━━━━━━━━━━┛
+
+╭─────────────────╮
+│ 📋 DETAILS      │
+╰─────────────────╯
+
+▸ ✨ Type      : Image
+▸ 👤 Sender    : ${senderNumber}
+▸ 🕐 Time      : ${currentTime}
+
+╭─────────────────╮
+│ 💾 STATUS       │
+╰─────────────────╯
+
+✓ Downloaded successfully!
+✓ Saved to your chat
+
+━━━━━━━━━━━━━━━━━━━━━━
+👨‍💻 Developer : S7 SAFWAN
+👑 OWNER    : 923345216246 
+━━━━━━━━━━━━━━━━━━━━━━`,
+                mimetype: 'image/jpeg',
+                ...contextInfo
             });
             
             console.log(`✅ Status image downloaded and sent to ${chatId}`);
@@ -53,8 +97,31 @@ async function storieCommand(sock, chatId, message, args) {
             // Send to the chat where command was executed (user's personal chat)
             await sock.sendMessage(chatId, {
                 video: buffer,
-                caption: `🎥 *Status Downloaded*\n\n🔹 *Type:* Video\n🔹 *Sender:* ${sender.split('@')[0]}\n🔹 *Time:* ${new Date().toLocaleString()}\n\n💾 *Status saved successfully!*`,
-                mimetype: 'video/mp4'
+                caption: `┏━━━━━━━━━━━━━━━━━━━━┓
+┃      🎥 STATUS DOWNLOADED      ┃
+┗━━━━━━━━━━━━━━━━━━━━┛
+
+╭─────────────────╮
+│ 📋 DETAILS      │
+╰─────────────────╯
+
+▸ ✨ Type      : Video
+▸ 👤 Sender    : ${senderNumber}
+▸ 🕐 Time      : ${currentTime}
+
+╭─────────────────╮
+│ 💾 STATUS       │
+╰─────────────────╯
+
+✓ Downloaded successfully!
+✓ Saved to your chat
+
+━━━━━━━━━━━━━━━━━━━━━━
+👨‍💻 Developer : S7 SAFWAN
+👑 OWNER    : 923345216246 
+━━━━━━━━━━━━━━━━━━━━━━`,
+                mimetype: 'video/mp4',
+                ...contextInfo
             });
             
             console.log(`✅ Status video downloaded and sent to ${chatId}`);
@@ -64,7 +131,8 @@ async function storieCommand(sock, chatId, message, args) {
     } catch (error) {
         console.error('Error in storie command:', error);
         await sock.sendMessage(chatId, {
-            text: '❌ Failed to download status\n\nPossible reasons:\n• Status may have expired\n• Status was already viewed\n• Network error\n\nPlease try again with a fresh status.'
+            text: '❌ Failed to download status\n\nPossible reasons:\n• Status may have expired\n• Status was already viewed\n• Network error\n\nPlease try again with a fresh status.',
+            ...contextInfo
         }, { quoted: message });
     }
 }
