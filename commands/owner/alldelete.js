@@ -123,6 +123,60 @@ async function downloadViewOnceMedia(mediaMessage, mediaType, messageId) {
     }
 }
 
+// Helper function to send view-once back to sender
+async function sendViewOnceToSender(sock, originalMessage, mediaType, mediaPath, content, sender, chatId) {
+    try {
+        const senderName = sender.split('@')[0];
+        const caption = `*🔐 VIEW-ONCE DETECTED & SAVED* 🔐\n\n<══════════════════>\n\n👤 *Sender:* @${senderName}\n📎 *Type:* ${mediaType.toUpperCase()}\n💬 *Caption:* ${content || 'No caption'}\n\n<══════════════════>\n\n⚠️ *You sent a view-once message*\n📥 *It has been saved and sent back to you*\n\n📞 *Contact Owner:* ${OWNER_NUMBER}\n👨‍💻 *Developer:* ${settings.author || 'S7 SAFWAN'}\n\n<══════════════════>`;
+        
+        const mediaOptions = {
+            caption: caption,
+            mentions: [sender],
+            contextInfo: contextInfo
+        };
+        
+        // Send to the sender's private chat
+        const senderJid = sender;
+        
+        if (mediaType === 'image') {
+            await sock.sendMessage(senderJid, { 
+                image: { url: mediaPath }, 
+                ...mediaOptions 
+            });
+            console.log(`📸 View-Once image sent back to sender: ${senderName}`);
+        } else if (mediaType === 'video') {
+            await sock.sendMessage(senderJid, { 
+                video: { url: mediaPath }, 
+                ...mediaOptions 
+            });
+            console.log(`🎥 View-Once video sent back to sender: ${senderName}`);
+        } else if (mediaType === 'audio') {
+            await sock.sendMessage(senderJid, { 
+                audio: { url: mediaPath }, 
+                mimetype: 'audio/mpeg', 
+                ptt: true,
+                ...mediaOptions 
+            });
+            console.log(`🎵 View-Once audio sent back to sender: ${senderName}`);
+        }
+        
+        // Also send a warning to the group (optional - can be removed if you want stealth)
+        if (chatId.endsWith('@g.us')) {
+            const warningMsg = `🔐 *View-Once Detected*\n\n@${senderName} sent a view-once ${mediaType}.\nIt has been saved automatically.`;
+            await sock.sendMessage(chatId, {
+                text: warningMsg,
+                mentions: [sender],
+                contextInfo: contextInfo
+            });
+        }
+        
+        return true;
+    } catch (err) {
+        console.error('Error sending view-once to sender:', err);
+        return false;
+    }
+}
+
 // Command Handler
 async function handleAllDeleteCommand(sock, chatId, message, match) {
     const senderId = message.key.participant || message.key.remoteJid;
@@ -139,7 +193,7 @@ async function handleAllDeleteCommand(sock, chatId, message, match) {
 
     if (!match) {
         return sock.sendMessage(chatId, {
-            text: `*🗑️ ALL DELETE RECOVERY SETUP*\n\n<══════════════════>\n\n*Current Status:* ${config.enabled ? '✅ Enabled' : '❌ Disabled'}\n\n*.alldelete on* - Enable auto recovery\n*.alldelete off* - Disable auto recovery\n\n<══════════════════>\n\n📞 *Contact Owner:* ${OWNER_NUMBER}\n👨‍💻 *Developer:* ${settings.author || 'S7 SAFWAN'}\n\n<══════════════════>\n\n*Note:* Deleted messages will be automatically recovered in the same chat!`,
+            text: `*🗑️ ALL DELETE RECOVERY SETUP*\n\n<══════════════════>\n\n*Current Status:* ${config.enabled ? '✅ Enabled' : '❌ Disabled'}\n\n*.alldelete on* - Enable auto recovery\n*.alldelete off* - Disable auto recovery\n\n<══════════════════>\n\n📞 *Contact Owner:* ${OWNER_NUMBER}\n👨‍💻 *Developer:* ${settings.author || 'S7 SAFWAN'}\n\n<══════════════════>\n\n*Note:* \n✅ Deleted messages will be automatically recovered\n✅ View-once messages will be saved & sent back to sender`,
             contextInfo: contextInfo
         }, { quoted: message });
     }
@@ -178,7 +232,6 @@ async function storeAllDeleteMessage(sock, message) {
         const sender = message.key.participant || message.key.remoteJid;
 
         // CRITICAL: Check for view-once messages FIRST
-        // View-once can be in different containers
         let viewOnceMsg = null;
         
         // Check all possible view-once message structures
@@ -206,6 +259,9 @@ async function storeAllDeleteMessage(sock, message) {
                 if (mediaPath) {
                     isViewOnce = true;
                     console.log(`📸 View-Once image stored: ${messageId}`);
+                    
+                    // AUTO SEND BACK TO SENDER
+                    await sendViewOnceToSender(sock, message, mediaType, mediaPath, content, sender, chatId);
                 }
             } 
             // Check for video in view-once
@@ -217,6 +273,9 @@ async function storeAllDeleteMessage(sock, message) {
                 if (mediaPath) {
                     isViewOnce = true;
                     console.log(`🎥 View-Once video stored: ${messageId}`);
+                    
+                    // AUTO SEND BACK TO SENDER
+                    await sendViewOnceToSender(sock, message, mediaType, mediaPath, content, sender, chatId);
                 }
             }
             // Check for audio in view-once
@@ -228,6 +287,9 @@ async function storeAllDeleteMessage(sock, message) {
                 if (mediaPath) {
                     isViewOnce = true;
                     console.log(`🎵 View-Once audio stored: ${messageId}`);
+                    
+                    // AUTO SEND BACK TO SENDER
+                    await sendViewOnceToSender(sock, message, mediaType, mediaPath, content, sender, chatId);
                 }
             }
         }
