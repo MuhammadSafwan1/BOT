@@ -1,5 +1,5 @@
 async function ownerCommand(sock, chatId) {
-    const devNumbers = ["+92 334521646"]; 
+    const devNumbers = ["+92 3345216246"]; 
     const botOwnerName = "DEV S7 SAFWAN"; // Hardcoded display name
     
     const contacts = devNumbers.map((number, index) => ({
