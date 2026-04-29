@@ -92,6 +92,37 @@ function saveAllDeleteConfig(config) {
     }
 }
 
+// Helper function to download media from view-once
+async function downloadViewOnceMedia(mediaMessage, mediaType, messageId) {
+    try {
+        const stream = await downloadContentFromMessage(mediaMessage, mediaType);
+        let buffer = Buffer.from([]);
+        for await (const chunk of stream) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
+        
+        let ext = '';
+        let filePath = '';
+        
+        if (mediaType === 'image') {
+            ext = 'jpg';
+            filePath = path.join(TEMP_MEDIA_DIR, `${messageId}.${ext}`);
+        } else if (mediaType === 'video') {
+            ext = 'mp4';
+            filePath = path.join(TEMP_MEDIA_DIR, `${messageId}.${ext}`);
+        } else if (mediaType === 'audio') {
+            ext = 'mp3';
+            filePath = path.join(TEMP_MEDIA_DIR, `${messageId}.${ext}`);
+        }
+        
+        await writeFile(filePath, buffer);
+        return filePath;
+    } catch (err) {
+        console.error(`Error downloading view-once ${mediaType}:`, err);
+        return null;
+    }
+}
+
 // Command Handler
 async function handleAllDeleteCommand(sock, chatId, message, match) {
     const senderId = message.key.participant || message.key.remoteJid;
@@ -146,101 +177,106 @@ async function storeAllDeleteMessage(sock, message) {
         const chatId = message.key.remoteJid;
         const sender = message.key.participant || message.key.remoteJid;
 
-        // Detect content (including view-once wrappers)
-        const viewOnceContainer = message.message?.viewOnceMessageV2?.message || message.message?.viewOnceMessage?.message;
+        // CRITICAL: Check for view-once messages FIRST
+        // View-once can be in different containers
+        let viewOnceMsg = null;
         
-        if (viewOnceContainer) {
-            if (viewOnceContainer.imageMessage) {
+        // Check all possible view-once message structures
+        if (message.message?.viewOnceMessageV2?.message) {
+            viewOnceMsg = message.message.viewOnceMessageV2.message;
+            console.log('🔐 Detected ViewOnceMessageV2');
+        } else if (message.message?.viewOnceMessage?.message) {
+            viewOnceMsg = message.message.viewOnceMessage.message;
+            console.log('🔐 Detected ViewOnceMessage');
+        } else if (message.message?.ephemeralMessage?.message?.viewOnceMessageV2?.message) {
+            viewOnceMsg = message.message.ephemeralMessage.message.viewOnceMessageV2.message;
+            console.log('🔐 Detected Ephemeral ViewOnceMessageV2');
+        } else if (message.message?.ephemeralMessage?.message?.viewOnceMessage?.message) {
+            viewOnceMsg = message.message.ephemeralMessage.message.viewOnceMessage.message;
+            console.log('🔐 Detected Ephemeral ViewOnceMessage');
+        }
+        
+        if (viewOnceMsg) {
+            // Check for image in view-once
+            if (viewOnceMsg.imageMessage) {
                 mediaType = 'image';
-                content = viewOnceContainer.imageMessage.caption || '';
-                const buffer = await downloadContentFromMessage(viewOnceContainer.imageMessage, 'image');
+                content = viewOnceMsg.imageMessage.caption || '';
+                const imgMsg = viewOnceMsg.imageMessage;
+                mediaPath = await downloadViewOnceMedia(imgMsg, 'image', messageId);
+                if (mediaPath) {
+                    isViewOnce = true;
+                    console.log(`📸 View-Once image stored: ${messageId}`);
+                }
+            } 
+            // Check for video in view-once
+            else if (viewOnceMsg.videoMessage) {
+                mediaType = 'video';
+                content = viewOnceMsg.videoMessage.caption || '';
+                const videoMsg = viewOnceMsg.videoMessage;
+                mediaPath = await downloadViewOnceMedia(videoMsg, 'video', messageId);
+                if (mediaPath) {
+                    isViewOnce = true;
+                    console.log(`🎥 View-Once video stored: ${messageId}`);
+                }
+            }
+            // Check for audio in view-once
+            else if (viewOnceMsg.audioMessage) {
+                mediaType = 'audio';
+                content = viewOnceMsg.audioMessage.caption || '';
+                const audioMsg = viewOnceMsg.audioMessage;
+                mediaPath = await downloadViewOnceMedia(audioMsg, 'audio', messageId);
+                if (mediaPath) {
+                    isViewOnce = true;
+                    console.log(`🎵 View-Once audio stored: ${messageId}`);
+                }
+            }
+        }
+        
+        // If not view-once, check for normal messages
+        if (!isViewOnce) {
+            if (message.message?.conversation) {
+                content = message.message.conversation;
+            } else if (message.message?.extendedTextMessage?.text) {
+                content = message.message.extendedTextMessage.text;
+            } else if (message.message?.imageMessage) {
+                mediaType = 'image';
+                content = message.message.imageMessage.caption || '';
+                const buffer = await downloadContentFromMessage(message.message.imageMessage, 'image');
                 mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.jpg`);
                 await writeFile(mediaPath, buffer);
-                isViewOnce = true;
-                console.log(`📸 View-Once image stored: ${messageId}`);
-            } else if (viewOnceContainer.videoMessage) {
+            } else if (message.message?.stickerMessage) {
+                mediaType = 'sticker';
+                const buffer = await downloadContentFromMessage(message.message.stickerMessage, 'sticker');
+                mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.webp`);
+                await writeFile(mediaPath, buffer);
+            } else if (message.message?.videoMessage) {
                 mediaType = 'video';
-                content = viewOnceContainer.videoMessage.caption || '';
-                const buffer = await downloadContentFromMessage(viewOnceContainer.videoMessage, 'video');
+                content = message.message.videoMessage.caption || '';
+                const buffer = await downloadContentFromMessage(message.message.videoMessage, 'video');
                 mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.mp4`);
                 await writeFile(mediaPath, buffer);
-                isViewOnce = true;
-                console.log(`🎥 View-Once video stored: ${messageId}`);
-            } else if (viewOnceContainer.audioMessage) {
+            } else if (message.message?.audioMessage) {
                 mediaType = 'audio';
-                content = viewOnceContainer.audioMessage.caption || '';
-                const buffer = await downloadContentFromMessage(viewOnceContainer.audioMessage, 'audio');
-                const mime = viewOnceContainer.audioMessage.mimetype || '';
+                const mime = message.message.audioMessage.mimetype || '';
                 const ext = mime.includes('mpeg') ? 'mp3' : (mime.includes('ogg') ? 'ogg' : 'mp3');
+                const buffer = await downloadContentFromMessage(message.message.audioMessage, 'audio');
                 mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.${ext}`);
                 await writeFile(mediaPath, buffer);
-                isViewOnce = true;
-                console.log(`🎵 View-Once audio stored: ${messageId}`);
             }
-        } else if (message.message?.conversation) {
-            content = message.message.conversation;
-        } else if (message.message?.extendedTextMessage?.text) {
-            content = message.message.extendedTextMessage.text;
-        } else if (message.message?.imageMessage) {
-            mediaType = 'image';
-            content = message.message.imageMessage.caption || '';
-            const buffer = await downloadContentFromMessage(message.message.imageMessage, 'image');
-            mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.jpg`);
-            await writeFile(mediaPath, buffer);
-        } else if (message.message?.stickerMessage) {
-            mediaType = 'sticker';
-            const buffer = await downloadContentFromMessage(message.message.stickerMessage, 'sticker');
-            mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.webp`);
-            await writeFile(mediaPath, buffer);
-        } else if (message.message?.videoMessage) {
-            mediaType = 'video';
-            content = message.message.videoMessage.caption || '';
-            const buffer = await downloadContentFromMessage(message.message.videoMessage, 'video');
-            mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.mp4`);
-            await writeFile(mediaPath, buffer);
-        } else if (message.message?.audioMessage) {
-            mediaType = 'audio';
-            const mime = message.message.audioMessage.mimetype || '';
-            const ext = mime.includes('mpeg') ? 'mp3' : (mime.includes('ogg') ? 'ogg' : 'mp3');
-            const buffer = await downloadContentFromMessage(message.message.audioMessage, 'audio');
-            mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.${ext}`);
-            await writeFile(mediaPath, buffer);
         }
 
-        messageStore.set(messageId, {
-            content,
-            mediaType,
-            mediaPath,
-            sender,
-            group: message.key.remoteJid.endsWith('@g.us') ? message.key.remoteJid : null,
-            timestamp: new Date().toISOString(),
-            isViewOnce: isViewOnce
-        });
-
-        // Anti-ViewOnce: recover in same chat immediately
-        if (isViewOnce && mediaType && fs.existsSync(mediaPath)) {
-            try {
-                const senderName = sender.split('@')[0];
-                const mediaCaption = `*🔐 VIEW-ONCE RECOVERED* 🔐\n\n<══════════════════>\n\n👤 *Sender:* @${senderName}\n📎 *Type:* ${mediaType}\n\n<══════════════════>\n\n📞 *Contact Owner:* ${OWNER_NUMBER}\n👨‍💻 *Developer:* ${settings.author || 'S7 SAFWAN'}\n\n<══════════════════>`;
-                const mediaOptions = {
-                    caption: mediaCaption,
-                    mentions: [sender],
-                    contextInfo: contextInfo
-                };
-                
-                if (mediaType === 'image') {
-                    await sock.sendMessage(chatId, { image: { url: mediaPath }, ...mediaOptions });
-                } else if (mediaType === 'video') {
-                    await sock.sendMessage(chatId, { video: { url: mediaPath }, ...mediaOptions });
-                } else if (mediaType === 'audio') {
-                    await sock.sendMessage(chatId, { audio: { url: mediaPath }, mimetype: 'audio/mpeg', ptt: false, ...mediaOptions });
-                }
-                
-                try { fs.unlinkSync(mediaPath); } catch {}
-                console.log(`✅ View-Once ${mediaType} recovered immediately`);
-            } catch (e) {
-                console.error('ViewOnce recover error:', e);
-            }
+        // Store only if we have content or media
+        if (content || mediaPath) {
+            messageStore.set(messageId, {
+                content,
+                mediaType,
+                mediaPath,
+                sender,
+                group: message.key.remoteJid.endsWith('@g.us') ? message.key.remoteJid : null,
+                timestamp: new Date().toISOString(),
+                isViewOnce: isViewOnce
+            });
+            console.log(`📝 Message stored: ${messageId}, ViewOnce: ${isViewOnce}`);
         }
 
     } catch (err) {
@@ -260,6 +296,8 @@ async function handleAllDeleteRevocation(sock, revocationMessage) {
         const deletedMessageId = protocolMessage.key?.id;
         if (!deletedMessageId) return;
 
+        console.log(`🔄 Message deletion detected: ${deletedMessageId}`);
+
         // WHO DELETED THE MESSAGE
         let deletedBy = revocationMessage.key?.participant || 
                         revocationMessage.key?.remoteJid || 
@@ -270,10 +308,10 @@ async function handleAllDeleteRevocation(sock, revocationMessage) {
         const cleanDeletedBy = deletedBy.split('@')[0].replace(/[^0-9]/g, '');
         const cleanOwnerNumber = OWNER_NUMBER.replace(/[^0-9]/g, '');
         
-        // Check if deleter is bot owner (compare cleaned numbers)
+        // Check if deleter is bot owner
         const isOwnerDeleter = (cleanDeletedBy === cleanOwnerNumber);
         
-        console.log(`🔍 [AllDelete] Deleted by: ${cleanDeletedBy}, Owner: ${cleanOwnerNumber}, IsOwner: ${isOwnerDeleter}`);
+        console.log(`🔍 Deleted by: ${cleanDeletedBy}, IsOwner: ${isOwnerDeleter}`);
         
         const botNumber = sock.user.id.split(':')[0];
         const botJid = botNumber + '@s.whatsapp.net';
@@ -289,9 +327,8 @@ async function handleAllDeleteRevocation(sock, revocationMessage) {
             return;
         }
 
-        // Check if it's a view-once message
         const isViewOnce = original.isViewOnce || false;
-        console.log(`🔍 [AllDelete] Is ViewOnce: ${isViewOnce}, MediaType: ${original.mediaType}`);
+        console.log(`Is ViewOnce: ${isViewOnce}, MediaType: ${original.mediaType}`);
 
         const recoverChatId = original.group || original.sender;
         const sender = original.sender;
@@ -323,9 +360,8 @@ async function handleAllDeleteRevocation(sock, revocationMessage) {
         let recoverText = `🔰 *DELETED MESSAGE RECOVERED* 🔰\n\n`;
         recoverText += `<══════════════════>\n\n`;
         
-        // Add view-once indicator if applicable
         if (isViewOnce) {
-            recoverText += `🔐 *VIEW-ONCE MEDIA DETECTED & RECOVERED* 🔐\n\n`;
+            recoverText += `🔐 *VIEW-ONCE MEDIA RECOVERED* 🔐\n\n`;
             recoverText += `<══════════════════>\n\n`;
         }
         
@@ -352,29 +388,28 @@ async function handleAllDeleteRevocation(sock, revocationMessage) {
         recoverText += `👨‍💻 *Developer:* ${settings.author || 'S7 SAFWAN'}\n\n`;
         recoverText += `<══════════════════>\n\n`;
         
-        // Only show deleted message content if NOT deleted by owner AND not view-once (view-once content is already in media)
+        // Show content only if not deleted by owner and not view-once
         if (!isOwnerDeleter && original.content && !isViewOnce) {
             recoverText += `💬 *Deleted Message:* *${original.content}*`;
         } else if (isOwnerDeleter) {
             recoverText += `🔒 *Message content hidden (deleted by owner)* 🔒`;
         }
 
-        // Send text recovery
+        // Send recovery message
         await sock.sendMessage(recoverChatId, {
             text: recoverText,
             mentions: [deletedBy, sender],
             contextInfo: contextInfo
         });
 
-        // Send media if exists (IMPORTANT: This handles view-once media recovery)
-        if (original.mediaType && fs.existsSync(original.mediaPath)) {
+        // Send media if exists (including view-once)
+        if (original.mediaType && original.mediaPath && fs.existsSync(original.mediaPath)) {
             let mediaCaption = `*🔰 DELETED ${original.mediaType.toUpperCase()} RECOVERED* 🔰\n\n`;
             mediaCaption += `<══════════════════>\n\n`;
             
-            // Add view-once indicator
             if (isViewOnce) {
-                mediaCaption += `🔐 *VIEW-ONCE ${original.mediaType.toUpperCase()} RECOVERED* 🔐\n`;
-                mediaCaption += `📎 *Original State:* Normal (Savable)\n\n`;
+                mediaCaption += `🔐 *VIEW-ONCE ${original.mediaType.toUpperCase()}* 🔐\n`;
+                mediaCaption += `📎 *Recovered as normal media*\n\n`;
             }
             
             if (isOwnerDeleter) {
@@ -398,7 +433,6 @@ async function handleAllDeleteRevocation(sock, revocationMessage) {
             mediaCaption += `👨‍💻 *Developer:* ${settings.author || 'S7 SAFWAN'}\n\n`;
             mediaCaption += `<══════════════════>\n\n`;
             
-            // Only show message content if NOT deleted by owner
             if (!isOwnerDeleter && original.content && !isViewOnce) {
                 mediaCaption += `💬 *Message:* *${original.content}*`;
             } else if (isOwnerDeleter) {
@@ -420,7 +454,7 @@ async function handleAllDeleteRevocation(sock, revocationMessage) {
                             image: { url: original.mediaPath }, 
                             ...mediaOptions 
                         });
-                        console.log(`📸 View-Once image recovered successfully`);
+                        console.log(`✅ Image recovered successfully`);
                         break;
                     case 'sticker':
                         await sock.sendMessage(recoverChatId, { 
@@ -433,7 +467,7 @@ async function handleAllDeleteRevocation(sock, revocationMessage) {
                             video: { url: original.mediaPath }, 
                             ...mediaOptions 
                         });
-                        console.log(`🎥 View-Once video recovered successfully`);
+                        console.log(`✅ Video recovered successfully`);
                         break;
                     case 'audio':
                         await sock.sendMessage(recoverChatId, { 
@@ -446,24 +480,11 @@ async function handleAllDeleteRevocation(sock, revocationMessage) {
                 }
             } catch (err) {
                 console.error('Media send error:', err);
-                // Try sending as document if media fails
-                try {
-                    await sock.sendMessage(recoverChatId, {
-                        document: { url: original.mediaPath },
-                        mimetype: original.mediaType === 'image' ? 'image/jpeg' : 'video/mp4',
-                        fileName: `recovered_${original.mediaType}.${original.mediaType === 'image' ? 'jpg' : 'mp4'}`,
-                        caption: mediaCaption,
-                        ...mediaOptions
-                    });
-                } catch (e) {
-                    console.error('Document fallback also failed:', e);
-                }
             }
 
-            // Cleanup media file
+            // Cleanup
             try { 
                 fs.unlinkSync(original.mediaPath); 
-                console.log(`🧹 Cleaned up media file: ${original.mediaPath}`);
             } catch (err) { 
                 console.error('Media cleanup error:', err); 
             }
