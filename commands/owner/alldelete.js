@@ -4,6 +4,7 @@ const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const { writeFile } = require('fs/promises');
 
 // Import settings for owner number
+const isOwnerOrSudo = require('../../lib/isOwner');
 const settings = require('../../settings');
 
 const messageStore = new Map();
