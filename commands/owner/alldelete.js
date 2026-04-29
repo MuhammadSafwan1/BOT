@@ -5,20 +5,18 @@ const { writeFile } = require('fs/promises');
 
 // Import settings for owner number
 const settings = require('../../settings');
-const isOwnerOrSudo = require('../../lib/isOwner');
 
 const messageStore = new Map();
 const CONFIG_PATH = path.join(__dirname, '../../data/alldelete.json');
 const TEMP_MEDIA_DIR = path.join(__dirname, '../tmp');
 
-// Owner information from settings.js
-const OWNER_NUMBER = settings.ownerNumber || '923345216246';
-const OWNER_JID = OWNER_NUMBER + '@s.whatsapp.net';
+// Owner information from settings.js (no default value)
+const OWNER_NUMBER = settings.ownerNumber;
+const OWNER_JID = OWNER_NUMBER ? OWNER_NUMBER + '@s.whatsapp.net' : '';
 
 // Get all owner numbers from settings for proper checks
-const OWNER_NUMBERS = settings.ownerNumbers || [OWNER_NUMBER];
+const OWNER_NUMBERS = settings.ownerNumbers || [];
 const OWNER_JIDS = OWNER_NUMBERS.map(num => num + '@s.whatsapp.net');
-
 // Context info for forwarded appearance from settings.js
 const contextInfo = {
     forwardingScore: 1,
@@ -76,43 +74,44 @@ setInterval(cleanTempFolderIfLarge, 60 * 1000);
 // Function to get file extension from mimetype
 function getFileExtension(mimetype) {
     const extensions = {
-        'application/pdf': 'pdf',
-        'application/zip': 'zip',
-        'application/x-rar-compressed': 'rar',
-        'application/x-rar': 'rar',
-        'application/vnd.rar': 'rar',
-        'application/vnd.android.package-archive': 'apk',
-        'application/x-apk': 'apk',
-        'application/vnd.xapk': 'xapk',
-        'application/x-xapk-package': 'xapk',
-        'application/msword': 'doc',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
-        'application/vnd.ms-excel': 'xls',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
-        'application/vnd.ms-powerpoint': 'ppt',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
-        'text/plain': 'txt',
-        'application/json': 'json',
-        'application/xml': 'xml',
-        'text/xml': 'xml',
-        'application/javascript': 'js',
-        'text/css': 'css',
-        'text/html': 'html',
-        'application/x-httpd-php': 'php',
-        'application/x-python-code': 'py',
-        'application/x-java-archive': 'jar',
-        'application/x-7z-compressed': '7z',
-        'application/x-tar': 'tar',
-        'application/gzip': 'gz',
-        'application/x-bzip2': 'bz2',
-        'application/x-iso9660-image': 'iso',
-        'application/x-msi': 'msi',
-        'application/x-msdownload': 'exe',
-        'application/x-shockwave-flash': 'swf',
-        'application/x-www-form-urlencoded': 'url',
-        'application/octet-stream': 'file'
-    };
-    
+    'application/pdf': 'pdf',
+    'application/zip': 'zip',
+    'application/x-rar-compressed': 'rar',
+    'application/x-rar': 'rar',
+    'application/vnd.rar': 'rar',
+    'application/vnd.android.package-archive': 'apk',
+    'application/x-apk': 'apk',
+    'application/vnd.xapk': 'xapk',
+    'application/x-xapk-package': 'xapk',
+    'application/msword': 'doc',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+    'application/vnd.ms-excel': 'xls',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+    'application/vnd.ms-powerpoint': 'ppt',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+    'text/plain': 'txt',
+    'application/json': 'json',
+    'application/xml': 'xml',
+    'text/xml': 'xml',
+    'application/javascript': 'js',
+    'text/css': 'css',
+    'text/html': 'html',
+    'application/x-httpd-php': 'php',
+    'application/x-python-code': 'py',
+    'application/x-java-archive': 'jar',
+    'application/x-7z-compressed': '7z',
+    'application/x-tar': 'tar',
+    'application/gzip': 'gz',
+    'application/x-bzip2': 'bz2',
+    'application/x-iso9660-image': 'iso',
+    'application/x-msi': 'msi',
+    'application/x-msdownload': 'exe',
+    'application/x-shockwave-flash': 'swf',
+    'application/x-www-form-urlencoded': 'url',
+    'text/plain': 'bat',        
+    'application/x-bat': 'bat', 
+    'application/octet-stream': 'file'  // Keep as fallback
+};
     return extensions[mimetype] || 'file';
 }
 
@@ -151,7 +150,7 @@ async function handleAllDeleteCommand(sock, chatId, message, match) {
 
     if (!match) {
         return sock.sendMessage(chatId, {
-            text: `*🗑️ ALL DELETE RECOVERY SETUP*\n\n<══════════════════>\n\n*Current Status:* ${config.enabled ? '✅ Enabled' : '❌ Disabled'}\n\n*.alldelete on* - Enable auto recovery\n*.alldelete off* - Disable auto recovery\n\n<══════════════════>\n\n📞 *Contact Owner:* ${OWNER_NUMBER}\n👨‍💻 *Developer:* ${settings.author || 'S7 SAFWAN'}\n\n<══════════════════>\n\n*Note:* \n✅ Deleted messages will be automatically recovered\n✅ Supports: Images, Videos, Audio, Stickers, Documents (PDF, RAR, ZIP, APK, XAPK, Word, Excel, PPT, TXT, etc.)`,
+            text: `*🗑️ ALL DELETE RECOVERY SETUP*\n\n<══════════════════>\n\n*Current Status:* ${config.enabled ? '✅ Enabled' : '❌ Disabled'}\n\n*.alldelete on* - Enable auto recovery\n*.alldelete off* - Disable auto recovery\n\n<══════════════════>\n\n📞 *Contact Owner:* +92 3345216246\n👨‍💻 *Developer:* ${settings.author || 'S7 SAFWAN'}\n\n<══════════════════>\n\n*Note:* \n✅ Deleted messages will be automatically recovered\n✅ Supports: Images, Videos, Audio, Stickers, Documents (PDF, RAR, ZIP, APK, XAPK, Word, Excel, PPT, TXT, etc.)`,
             contextInfo: contextInfo
         }, { quoted: message });
     }
@@ -366,7 +365,7 @@ async function handleAllDeleteRevocation(sock, revocationMessage) {
         
         recoverText += `🕐 *Time:* ${time}\n\n`;
         recoverText += `<══════════════════>\n\n`;
-        recoverText += `📞 *Contact Owner:* ${OWNER_NUMBER}\n`;
+        recoverText += `📞 *Contact Owner:* +92 3345216246\n`;
         recoverText += `👨‍💻 *Developer:* ${settings.author || 'S7 SAFWAN'}\n\n`;
         recoverText += `<══════════════════>\n\n`;
         
@@ -414,7 +413,7 @@ async function handleAllDeleteRevocation(sock, revocationMessage) {
             
             mediaCaption += `🕐 *Time:* ${time}\n\n`;
             mediaCaption += `<══════════════════>\n\n`;
-            mediaCaption += `📞 *Contact Owner:* ${OWNER_NUMBER}\n`;
+            mediaCaption += `📞 *Contact Owner:* +92 3345216246\n`;
             mediaCaption += `👨‍💻 *Developer:* ${settings.author || 'S7 SAFWAN'}\n\n`;
             mediaCaption += `<══════════════════>\n\n`;
             

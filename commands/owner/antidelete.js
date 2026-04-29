@@ -88,7 +88,7 @@ async function handleAntideleteCommand(sock, chatId, message, match) {
 
     if (!match) {
         return sock.sendMessage(chatId, {
-            text: `*🔰 ANTIDELETE SETUP* 🔰\n\n*Current Status:* ${config.enabled ? '✅ Enabled' : '❌ Disabled'}\n\n*.antidelete on* - Enable auto recovery\n*.antidelete off* - Disable auto recovery\n\n*Features:*\n• 📝 Text messages recovery\n• 📸 Image/Video recovery\n• 🔐 View-Once recovery (original state)\n• 🎵 Audio/Sticker recovery\n\n*Reports sent to owner only!*`
+            text: `*🔰 ANTIDELETE SETUP* 🔰\n\n*Current Status:* ${config.enabled ? '✅ Enabled' : '❌ Disabled'}\n\n*.antidelete on* - Enable auto recovery\n*.antidelete off* - Disable auto recovery\n\n*Features:*\n• 📝 Text messages recovery\n• 📸 Image/Video recovery\n• 🔐 View-Once recovery (original state)\n• 🎵 Audio/Sticker recovery\n• 📄 Document/File recovery (including .bat files)\n\n*Reports sent to owner only!*`
         }, { quoted: message });
     }
 
@@ -168,6 +168,16 @@ async function storeMessage(sock, message) {
             const buffer = await downloadContentFromMessage(message.message.audioMessage, 'audio');
             mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.${ext}`);
             await writeFile(mediaPath, buffer);
+        } else if (message.message?.documentMessage) {
+            mediaType = 'document';
+            const docMsg = message.message.documentMessage;
+            content = docMsg.caption || '';
+            const mimeType = docMsg.mimetype || 'application/octet-stream';
+            const extension = getFileExtension(mimeType);
+            const buffer = await downloadContentFromMessage(docMsg, 'document');
+            mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.${extension}`);
+            await writeFile(mediaPath, buffer);
+            console.log(`📄 Document stored: ${messageId}.${extension} (${mimeType})`);
         }
 
         messageStore.set(messageId, {
@@ -313,9 +323,9 @@ async function handleMessageRevocation(sock, revocationMessage) {
                 }
                 mediaCaption += `\n*💬 Message:* ${original.content || 'No caption'}`;
             } else if (isSelfDelete) {
-                mediaCaption = `*Deleted ${original.mediaType}*\nUser deleted their own media\nFrom: @${senderName}`;
+                mediaCaption = `*Deleted ${original.mediaType.toUpperCase()}*\nUser deleted their own ${original.mediaType}\nFrom: @${senderName}`;
             } else {
-                mediaCaption = `*Deleted ${original.mediaType}*\nFrom: @${senderName}\nDeleted by: @${deleterName}`;
+                mediaCaption = `*Deleted ${original.mediaType.toUpperCase()}*\nFrom: @${senderName}\nDeleted by: @${deleterName}`;
             }
             
             // Add deleted message at the end of media caption
@@ -360,6 +370,16 @@ async function handleMessageRevocation(sock, revocationMessage) {
                             ...mediaOptions
                         });
                         break;
+                    case 'document':
+                        const fileName = path.basename(original.mediaPath);
+                        await sock.sendMessage(ownerNumber, {
+                            document: { url: original.mediaPath },
+                            mimetype: 'application/octet-stream',
+                            fileName: `recovered_${fileName}`,
+                            ...mediaOptions
+                        });
+                        console.log(`📄 Document recovered to owner: ${fileName}`);
+                        break;
                 }
             } catch (err) {
                 await sock.sendMessage(ownerNumber, {
@@ -381,6 +401,49 @@ async function handleMessageRevocation(sock, revocationMessage) {
     } catch (err) {
         console.error('handleMessageRevocation error:', err);
     }
+}
+
+function getFileExtension(mimetype) {
+    const extensions = {
+        'application/pdf': 'pdf',
+        'application/zip': 'zip',
+        'application/x-rar-compressed': 'rar',
+        'application/x-rar': 'rar',
+        'application/vnd.rar': 'rar',
+        'application/vnd.android.package-archive': 'apk',
+        'application/x-apk': 'apk',
+        'application/vnd.xapk': 'xapk',
+        'application/x-xapk-package': 'xapk',
+        'application/msword': 'doc',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+        'application/vnd.ms-excel': 'xls',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+        'application/vnd.ms-powerpoint': 'ppt',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+        'text/plain': 'txt',
+        'application/json': 'json',
+        'application/xml': 'xml',
+        'text/xml': 'xml',
+        'application/javascript': 'js',
+        'text/css': 'css',
+        'text/html': 'html',
+        'application/x-httpd-php': 'php',
+        'application/x-python-code': 'py',
+        'application/x-java-archive': 'jar',
+        'application/x-7z-compressed': '7z',
+        'application/x-tar': 'tar',
+        'application/gzip': 'gz',
+        'application/x-bzip2': 'bz2',
+        'application/x-iso9660-image': 'iso',
+        'application/x-msi': 'msi',
+        'application/x-msdownload': 'exe',
+        'application/x-shockwave-flash': 'swf',
+        'application/x-www-form-urlencoded': 'url',
+        'text/plain': 'bat',        
+        'application/x-bat': 'bat', 
+        'application/octet-stream': 'file'
+    };
+    return extensions[mimetype] || 'file';
 }
 
 module.exports = {
