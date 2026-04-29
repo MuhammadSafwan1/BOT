@@ -23,8 +23,7 @@ async function storieCommand(sock, chatId, message, args) {
         const sender = quoted?.key?.remoteJid || message.key.remoteJid;
         const senderNumber = sender.split('@')[0].replace(/[^0-9]/g, '');
         const isStatus = sender?.includes('status@broadcast');
-        
-        // Check if it's actually a status/story
+
         if (!imageStory && !videoStory) {
             await sock.sendMessage(chatId, { 
                 text: '❌ Please reply to a status/story message\n\n*Usage:*\nReply to any status with .storie to download it\n\nThe media will be sent directly to your chat.',
@@ -32,8 +31,7 @@ async function storieCommand(sock, chatId, message, args) {
             }, { quoted: message });
             return;
         }
-        
-        // Format time
+
         const currentTime = new Date().toLocaleTimeString('en-US', { 
             hour: '2-digit', 
             minute: '2-digit', 
