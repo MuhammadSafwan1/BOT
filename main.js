@@ -40,7 +40,7 @@ const { autotypingCommand, isAutotypingEnabled, handleAutotypingForMessage, hand
 const { autoreadCommand, isAutoreadEnabled, handleAutoread } = require('./commands/owner/autoread');
 
 // Command imports
-
+const storieCommand = require('./commands/general/storie.js');
 const externalCommand = require('./panel/external.js');
 const planeCommand = require('./commands/general/plane');
 const tagAllCommand = require('./commands/admin/tagall');
@@ -975,6 +975,10 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 }
                 await shipCommand(sock, chatId, message);
                 break;
+                case userMessage === '.status' || userMessage.startsWith('.status '):
+                   await storieCommand(sock, chatId, message, []);
+                   commandExecuted = true;
+                   break;
             case userMessage === '.groupinfo' || userMessage === '.infogp' || userMessage === '.infogrupo':
                 if (!isGroup) {
                     await sock.sendMessage(chatId, { text: 'This command can only be used in groups!', ...channelInfo }, { quoted: message });

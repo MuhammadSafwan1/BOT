@@ -124,6 +124,7 @@ async function helpCommand(sock, chatId, message) {
 ║═🔹 ${prefix}jid
 ║═🔹 ${prefix}plane
 ║═🔹 ${prefix}update
+║═🔹 ${prefix}status
 ║
 ║══════════════════>
 ║
