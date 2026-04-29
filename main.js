@@ -370,7 +370,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
 
             // General
             '.menu', '.help', '.bot', '.list', '.viewagain', '.status',
-            '.ping', '.alive', '.owner', '.settings', '.update',
+            '.ping', '.alive', '.owner', '.settings', '.update', '.alldelete',
 
             // Admin
             '.ban', '.unban', '.kick', '.mute', '.unmute', '.promote', '.demote',
