@@ -21,14 +21,14 @@ module.exports = {
 
 💰 *PRICING PLANS:* 💰
 
-📦 *1 Month* 
-   💵 $10 USD / 3000 PKR
+📦 *7 DAYS* 
+   💵 $2 USD / 500 PKR
 
-📦 *6 Months* 
-   💵 $50 USD / 14000 PKR
+📦 *1 Months* 
+   💵 $7 USD / 1800 PKR
 
 📦 *1 Year* 
-   💵 $90 USD / 25000 PKR
+   💵 $35 USD / 9500 PKR
 
 ━━━━━━━━━━━━━━━━━━━━━
 

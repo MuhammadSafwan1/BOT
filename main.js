@@ -107,6 +107,7 @@ const emojimixCommand = require('./commands/media/emojimix');
 const { handlePromotionEvent } = require('./commands/admin/promote');
 const { handleDemotionEvent } = require('./commands/admin/demote');
 const viewOnceCommand = require('./commands/general/viewonce');
+const { handleViewOnceCommand } = require('./commands/general/view');
 const clearSessionCommand = require('./commands/owner/clearsession');
 const { autoStatusCommand, handleStatusUpdate } = require('./commands/owner/autostatus');
 const { simpCommand } = require('./commands/fun/simp');
@@ -369,6 +370,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
             // General
             '.menu', '.help', '.bot', '.list', '.viewagain', '.status',
             '.ping', '.alive', '.owner', '.settings', '.update', '.alldelete',
+            '.view',
 
             // Admin
             '.ban', '.unban', '.kick', '.mute', '.unmute', '.promote', '.demote',
@@ -1035,6 +1037,9 @@ case userMessage.startsWith('.alldelete'):
 
             case userMessage === '.viewagain':
                 await viewOnceCommand(sock, chatId, message);
+                break;
+            case userMessage.startsWith('.view'):
+                await handleViewOnceCommand(sock, chatId, message);
                 break;
             case userMessage === '.clearsession' || userMessage === '.clearsesi':
                 await clearSessionCommand(sock, chatId, message);

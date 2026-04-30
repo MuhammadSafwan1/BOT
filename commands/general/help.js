@@ -173,6 +173,7 @@ async function helpCommand(sock, chatId, message) {
 ║═🔹 ${prefix}autoread <on/off>
 ║═🔹 ${prefix}anticall <on/off>
 ║═🔹 ${prefix}viewagain
+║═🔹 ${prefix}view
 ║═🔹 ${prefix}help
 ║═🔹 ${prefix}menu
 ║
