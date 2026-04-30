@@ -324,13 +324,6 @@ async function storeMessage(sock, message) {
             });
             console.log(`📝 Message stored: ${messageId} (Type: ${mediaType || 'text'})`);
         }
-
-        // Clean old messages from store (keep last 500)
-        if (messageStore.size > 500) {
-            const firstKey = messageStore.keys().next().value;
-            messageStore.delete(firstKey);
-        }
-
     } catch (err) {
         console.error('storeMessage error:', err);
     }
