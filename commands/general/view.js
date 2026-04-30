@@ -42,11 +42,6 @@ async function handleViewOnceCommand(sock, chatId, message) {
             caption: `📸 *VIEW-ONCE IMAGE RECOVERED*\n\n👤 From: ${senderNumber}${quotedImage.caption ? `\n💬 Caption: ${quotedImage.caption}` : ''}`,
             contextInfo
         });
-
-        await sock.sendMessage(chatId, {
-            text: '✅ *View-Once image sent to owner!*',
-            contextInfo
-        }, { quoted: message });
         return;
     }
 
@@ -62,11 +57,6 @@ async function handleViewOnceCommand(sock, chatId, message) {
             gifPlayback: false,
             contextInfo
         });
-
-        await sock.sendMessage(chatId, {
-            text: '✅ *View-Once video sent to owner!*',
-            contextInfo
-        }, { quoted: message });
         return;
     }
 
@@ -82,11 +72,6 @@ async function handleViewOnceCommand(sock, chatId, message) {
             ptt: true,
             contextInfo
         });
-
-        await sock.sendMessage(chatId, {
-            text: '✅ *View-Once voice note sent to owner!*',
-            contextInfo
-        }, { quoted: message });
         return;
     }
 
