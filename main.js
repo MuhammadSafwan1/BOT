@@ -194,23 +194,21 @@ async function handleMessages(sock, messageUpdate, printLog) {
         await handleAutoread(sock, message);
 
         await storeAllDeleteMessage(sock, message);
-        
-        // Handle message revocation for alldelete (when someone deletes a message)
+
+        // Store message for antidelete feature
+        storeMessage(sock, message);
+
+        // Handle message revocation for BOTH features
         if (message.message?.protocolMessage?.type === 0) {
-            console.log('🔄 Message deletion detected, recovering...');
-            await handleAllDeleteRevocation(sock, message);
-            return;
+        console.log('🔄 Message deletion detected, recovering...');
+        await handleAllDeleteRevocation(sock, message);
+        await handleMessageRevocation(sock, message);
+        return;
         }
         
         // Store message for antidelete feature
         if (message.message) {
             storeMessage(sock, message);
-        }
-
-        // Handle message revocation
-        if (message.message?.protocolMessage?.type === 0) {
-            await handleMessageRevocation(sock, message);
-            return;
         }
 
         const chatId = message.key.remoteJid;
@@ -427,7 +425,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
             // Utility
             '.translate', '.trt', '.ss', '.ssweb', '.screenshot',
             '.tourl', '.url', '.weather', '.news',
-            '.mention', '.setmention', '.antidelete',
+            '.mention', '.setmention',
 
             // Github
             '.git', '.github', '.sc', '.script', '.repo',
