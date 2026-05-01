@@ -117,7 +117,7 @@ async function animateStartupBanner(sockUser) {
         `Session    : ${sockUser?.id || 'unknown'}`,
         `Version    : ${BOT_VERSION}`,
         `Owner      : ${OWNER_NAME}`,
-        `Contact    : 923345216246`,
+        `Contact    : +92 3345216246`,
         `Status     : Connected and ready`,
         `Mode       : Licensed Private Bot`
     ], chalk.bgHex('#08121f').hex('#7dd3fc').bold)
@@ -495,7 +495,7 @@ async function startGodszealBotInc() {
             };
             
             await GodszealBotInc.sendMessage(botNumber, {
-                text: `🤖 ${BOT_NAME} CONNECTED SUCCESSFULLY.\n\n👑 Owner: ${OWNER_NAME}\n📞 Contact: 923345216246\n⏰ Time: ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Karachi' })}\n✅ Status: Online and ready.\n🔒 Mode: Licensed Private Bot`,
+                text: `🤖 ${BOT_NAME} CONNECTED SUCCESSFULLY.\n\n👑 Owner: ${OWNER_NAME}\n📞 Contact: +92 3345216246\n⏰ Time: ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Karachi' })}\n✅ Status: Online and ready.\n🔒 Mode: Licensed Private Bot`,
                 contextInfo: contextInfo
             });
         } catch (error) {

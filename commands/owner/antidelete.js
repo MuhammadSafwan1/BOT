@@ -425,7 +425,7 @@ async function handleMessageRevocation(sock, revocationMessage) {
         reportText += `\n🕐 *Time:* ${time}`;
         reportText += `\n📍 *Chat ID:* ${original.chatId}`;
         reportText += `\n\n══════════════════\n\n`;
-        reportText += `📞 *Contact Owner:* +92 3345216246}\n`;
+        reportText += `📞 *Contact Owner:* +92 3345216246\n`;
         reportText += `👨‍💻 *Developer:* S7 SAFWAN\n\n`;
         reportText += `══════════════════\n\n`;
 

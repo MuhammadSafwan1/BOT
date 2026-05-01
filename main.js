@@ -368,7 +368,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
             '.chfollow', '.followchannel', '.chreact', '.reactchannel',
 
             // General
-            '.menu', '.help', '.bot', '.list', '.viewagain', '.status',
+            '.menu', '.help', '.bot', '.list', '.va', '.status',
             '.ping', '.alive', '.owner', '.settings', '.update', '.alldelete',
             '.view',
 
@@ -1035,7 +1035,7 @@ case userMessage.startsWith('.alldelete'):
                 await stickerTelegramCommand(sock, chatId, message);
                 break;
 
-            case userMessage === '.viewagain':
+            case userMessage === '.va':
                 await viewOnceCommand(sock, chatId, message);
                 break;
             case userMessage.startsWith('.view'):
