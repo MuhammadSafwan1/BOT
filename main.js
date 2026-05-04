@@ -40,6 +40,7 @@ const { autotypingCommand, isAutotypingEnabled, handleAutotypingForMessage, hand
 const { autoreadCommand, isAutoreadEnabled, handleAutoread } = require('./commands/owner/autoread');
 
 // Command imports
+const assistantBotCommand = require('./commands/ai/assistantBot.js');
 const storieCommand = require('./commands/general/storie.js');
 const externalCommand = require('./panel/external.js');
 const planeCommand = require('./commands/general/plane');
@@ -393,6 +394,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
 
             // AI
             '.gpt', '.gemini', '.imagine', '.flux', '.dalle', '.sora',
+            '.autoreply',
 
             // Fun
             '.meme', '.joke', '.quote', '.fact', '.flirt', '.shayari',
@@ -1387,16 +1389,43 @@ case userMessage.startsWith('.alldelete'):
             case userMessage.startsWith('.sora'):
                 await soraCommand(sock, chatId, message);
                 break;
+                case userMessage === '.assistant' || userMessage === '.agent':
+    // This manually triggers the assistant (optional)
+    const OWNER_NUMBER = '1234567890@s.whatsapp.net'; // Replace with your number
+    await assistantBotCommand(sock, chatId, message, OWNER_NUMBER);
+    commandExecuted = true;
+    break;
+    case userMessage === '.autoreply on':
+case userMessage === '.autoreply off':
+    if (chatId === settings.ownerNumber || message.key.fromMe) {
+        const OWNER_NUMBER = settings.ownerNumber || '1234567890@s.whatsapp.net';
+        await assistantBotCommand(sock, chatId, message, OWNER_NUMBER);
+    } else {
+        await sock.sendMessage(chatId, { 
+            text: "❌ Only the owner can use this command.",
+            ...channelInfo 
+        });
+    }
+    commandExecuted = true;
+    break;
             default:
-                if (isGroup) {
-                    // Handle non-command group messages
-                    if (userMessage) {  // Make sure there's a message
-                        await handleChatbotResponse(sock, chatId, message, userMessage, senderId);
-                    }
-                    await handleTagDetection(sock, chatId, message, senderId);
-                    await handleMentionDetection(sock, chatId, message);
-                }
-                commandExecuted = false;
+                // Auto-run assistant for non-command messages in private chats
+    if (!isGroup && userMessage && !userMessage.startsWith('.')) {
+        const OWNER_NUMBER = settings.ownerNumber || '923345216246@s.whatsapp.net';
+        if (chatId !== OWNER_NUMBER) {
+            await assistantBotCommand(sock, chatId, message, OWNER_NUMBER);
+        }
+    }
+    
+    // Keep your existing group handling
+    if (isGroup) {
+        if (userMessage) {
+            await handleChatbotResponse(sock, chatId, message, userMessage, senderId);
+        }
+        await handleTagDetection(sock, chatId, message, senderId);
+        await handleMentionDetection(sock, chatId, message);
+    }
+    commandExecuted = false;
                 break;
         }
 
