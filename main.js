@@ -1390,15 +1390,21 @@ case userMessage.startsWith('.alldelete'):
                 await soraCommand(sock, chatId, message);
                 break;
                 case userMessage === '.assistant' || userMessage === '.agent':
-    // This manually triggers the assistant (optional)
-    const OWNER_NUMBER = '1234567890@s.whatsapp.net'; // Replace with your number
-    await assistantBotCommand(sock, chatId, message, OWNER_NUMBER);
-    commandExecuted = true;
-    break;
-    case userMessage === '.autoreply on':
+   
+                // This manually triggers the assistant (optional)
+const OWNER_NUMBER = '923345216246@s.whatsapp.net'; // ✅ Your real number
+await assistantBotCommand(sock, chatId, message, OWNER_NUMBER);
+commandExecuted = true;
+break;
+
+case userMessage === '.autoreply on':
 case userMessage === '.autoreply off':
-    if (chatId === settings.ownerNumber || message.key.fromMe) {
-        const OWNER_NUMBER = settings.ownerNumber || '1234567890@s.whatsapp.net';
+    const OWNER_NUMBER = '923345216246@s.whatsapp.net'; // ✅ Hardcoded, no settings.ownerNumber
+    // ✅ Normalize both sides before comparing
+    const normalizedChatId = chatId.split('@')[0];
+    const normalizedOwner = OWNER_NUMBER.split('@')[0];
+    
+    if (normalizedChatId === normalizedOwner || message.key.fromMe) {
         await assistantBotCommand(sock, chatId, message, OWNER_NUMBER);
     } else {
         await sock.sendMessage(chatId, { 
@@ -1408,16 +1414,19 @@ case userMessage === '.autoreply off':
     }
     commandExecuted = true;
     break;
-            default:
-                // Auto-run assistant for non-command messages in private chats
+
+default:
+    // Auto-run assistant for non-command messages in private chats
     if (!isGroup && userMessage && !userMessage.startsWith('.')) {
-        const OWNER_NUMBER = settings.ownerNumber || '923345216246@s.whatsapp.net';
-        if (chatId !== OWNER_NUMBER) {
+        const OWNER_NUMBER = '923345216246@s.whatsapp.net'; // ✅ Hardcoded
+        const normalizedChat = chatId.split('@')[0];
+        const normalizedOwnerNum = OWNER_NUMBER.split('@')[0];
+        
+        if (normalizedChat !== normalizedOwnerNum) { // ✅ Normalized check
             await assistantBotCommand(sock, chatId, message, OWNER_NUMBER);
         }
     }
     
-    // Keep your existing group handling
     if (isGroup) {
         if (userMessage) {
             await handleChatbotResponse(sock, chatId, message, userMessage, senderId);
@@ -1426,7 +1435,7 @@ case userMessage === '.autoreply off':
         await handleMentionDetection(sock, chatId, message);
     }
     commandExecuted = false;
-                break;
+    break;
         }
 
         // If a command was executed, show typing status after command execution
