@@ -40,7 +40,6 @@ const { autotypingCommand, isAutotypingEnabled, handleAutotypingForMessage, hand
 const { autoreadCommand, isAutoreadEnabled, handleAutoread } = require('./commands/owner/autoread');
 
 // Command imports
-const assistantBotCommand = require('./commands/ai/assistantBot.js');
 const storieCommand = require('./commands/general/storie.js');
 const externalCommand = require('./panel/external.js');
 const planeCommand = require('./commands/general/plane');
@@ -394,7 +393,6 @@ async function handleMessages(sock, messageUpdate, printLog) {
 
             // AI
             '.gpt', '.gemini', '.imagine', '.flux', '.dalle', '.sora',
-            '.autoreply',
 
             // Fun
             '.meme', '.joke', '.quote', '.fact', '.flirt', '.shayari',
@@ -1389,53 +1387,17 @@ case userMessage.startsWith('.alldelete'):
             case userMessage.startsWith('.sora'):
                 await soraCommand(sock, chatId, message);
                 break;
-                case userMessage === '.assistant' || userMessage === '.agent':
-   
-                // This manually triggers the assistant (optional)
-const OWNER_NUMBER = '923345216246@s.whatsapp.net'; // ✅ Your real number
-await assistantBotCommand(sock, chatId, message, OWNER_NUMBER);
-commandExecuted = true;
-break;
-
-case userMessage === '.autoreply on':
-case userMessage === '.autoreply off':
-    const OWNER_NUMBER = '923345216246@s.whatsapp.net'; // ✅ Hardcoded, no settings.ownerNumber
-    // ✅ Normalize both sides before comparing
-    const normalizedChatId = chatId.split('@')[0];
-    const normalizedOwner = OWNER_NUMBER.split('@')[0];
-    
-    if (normalizedChatId === normalizedOwner || message.key.fromMe) {
-        await assistantBotCommand(sock, chatId, message, OWNER_NUMBER);
-    } else {
-        await sock.sendMessage(chatId, { 
-            text: "❌ Only the owner can use this command.",
-            ...channelInfo 
-        });
-    }
-    commandExecuted = true;
-    break;
-
-default:
-    // Auto-run assistant for non-command messages in private chats
-    if (!isGroup && userMessage && !userMessage.startsWith('.')) {
-        const OWNER_NUMBER = '923345216246@s.whatsapp.net'; // ✅ Hardcoded
-        const normalizedChat = chatId.split('@')[0];
-        const normalizedOwnerNum = OWNER_NUMBER.split('@')[0];
-        
-        if (normalizedChat !== normalizedOwnerNum) { // ✅ Normalized check
-            await assistantBotCommand(sock, chatId, message, OWNER_NUMBER);
-        }
-    }
-    
-    if (isGroup) {
-        if (userMessage) {
-            await handleChatbotResponse(sock, chatId, message, userMessage, senderId);
-        }
-        await handleTagDetection(sock, chatId, message, senderId);
-        await handleMentionDetection(sock, chatId, message);
-    }
-    commandExecuted = false;
-    break;
+            default:
+                if (isGroup) {
+                    // Handle non-command group messages
+                    if (userMessage) {  // Make sure there's a message
+                        await handleChatbotResponse(sock, chatId, message, userMessage, senderId);
+                    }
+                    await handleTagDetection(sock, chatId, message, senderId);
+                    await handleMentionDetection(sock, chatId, message);
+                }
+                commandExecuted = false;
+                break;
         }
 
         // If a command was executed, show typing status after command execution

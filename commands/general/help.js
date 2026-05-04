@@ -245,7 +245,6 @@ async function helpCommand(sock, chatId, message) {
 ║═🔹 ${prefix}imagine <prompt>
 ║═🔹 ${prefix}flux <prompt>
 ║═🔹 ${prefix}sora <query>
-║═🔹 ${prefix}autoreply <on/off>
 ║
 ║══════════════════>
 ║
